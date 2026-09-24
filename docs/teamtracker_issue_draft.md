@@ -56,15 +56,28 @@ TeamTracker already supports narrowing the scoreboard query with
 
 In short: this can't be worked around by any existing config option.
 
-## Suggested fix
+## Suggested fixes
 
-On a 400 from the scoreboard endpoint, retry with a **narrower query**
-instead of dropping `dates` outright — ideally a single bare date
-(`dates=YYYYMMDD`, no range) for the day(s) actually needed, rather than
-silently falling back to "whatever ESPN's default is today." A single-date
-query is the one format confirmed to succeed for this league. If multiple
-days need to be checked, issue one single-date request per day rather than
-a range.
+Two independent options, either of which would resolve the symptom above:
+
+1. **Narrow the query instead of dropping it.** On a 400 from the
+   scoreboard endpoint, retry with a **narrower query** instead of
+   dropping `dates` outright — ideally a single bare date
+   (`dates=YYYYMMDD`, no range) for the day(s) actually needed, rather
+   than silently falling back to "whatever ESPN's default is today." A
+   single-date query is the one format confirmed to succeed for this
+   league. If multiple days need to be checked, issue one single-date
+   request per day rather than a range.
+2. **Raise the event limit.** Confirmed live: ESPN honors a much larger
+   `limit=` value on this scoreboard endpoint than the `API_LIMIT = 50`
+   TeamTracker currently sends — a `limit=500` request against
+   `usa.ncaa.w.1` on 2026-09-24 returned 86 events (comfortably above the
+   default cap) with no sign of truncation or a smaller effective server
+   cap. Simply raising `API_LIMIT` (or making it configurable) would stop
+   a busy national day from filling the cap before the requested team's
+   own match is reached, without needing to touch the `dates=` handling
+   at all. This is a smaller, more isolated change than option 1 and
+   could be applied independently of it.
 
 ## Environment
 
