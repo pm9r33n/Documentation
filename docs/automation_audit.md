@@ -304,12 +304,28 @@ frequently either don't notify at all (`wvu_soccer_fallback_refresh`,
 
 - **`configuration.yaml`** — a WebRTC TURN relay `username`/`credential` pair is hardcoded in
   the `web_rtc: ice_servers:` block (second list entry, added by Homeway).
+  **Status (Phase 0, 2026-09-25): accepted risk, not an open task.** Confirmed via the file's
+  own header comment that Homeway issues and auto-manages this block
+  (`homeway_auto_update` defaults on; the comment only shows how to *disable* auto-update, so
+  it is currently active). The credential is unchanged between the current file and a much
+  older `configuration.yaml.bak-pre-sportsintel` snapshot, consistent with a static
+  per-installation Homeway relay credential rather than something that self-rotates.
+  Deliberately left in place and out of `secrets.yaml`: moving it risks Homeway's next
+  auto-update silently clobbering the reference, and rotation (if wanted) is a Homeway support
+  question, not something fixable from this config. Exposure is scoped to Homeway's own WebRTC
+  relay, not to this HA instance's credentials.
 - **`packages/dawarich_push.yaml`** and **`packages/dawarich_stats.yaml`** — four distinct
   Dawarich API keys (one per Paul/Shaughn/Trevar/Carrie) are hardcoded directly in
-  `rest_command` URLs as `?api_key=...` query parameters — 8 occurrences total across the two
-  files, live and in active use. The same four keys also persist in the inert
-  `dawarich_push.yaml.bak-20260823-carrie-carissa-fix`. This is a more material exposure than
-  the TURN credential since these are active service credentials sitting in plain-text YAML.
+  `rest_command`/`resource` URLs as `?api_key=...` query parameters — 9 occurrences total
+  across the two files (5 in `dawarich_push.yaml`, including a `dawarich_stats_pm_test`
+  diagnostic reusing Paul's key; 4 in `dawarich_stats.yaml`), live and in active use. The same
+  four keys also persisted in `dawarich_push.yaml.bak-20260823-carrie-carissa-fix`, moved to
+  `/config/backups/` during Phase 0 cleanup (2026-09-25) pending rotation. This is a more
+  material exposure than the TURN credential since these are active service credentials
+  sitting in plain-text YAML. **Status (Phase 0): remediation in progress** — Paul rotates the
+  4 keys in Dawarich directly (no API access from this session) and adds them to
+  `secrets.yaml` himself (write-restricted to this session by design); the package files then
+  switch to `!secret` references.
 
 ---
 
