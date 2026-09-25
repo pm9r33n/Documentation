@@ -236,12 +236,25 @@ frequently either don't notify at all (`wvu_soccer_fallback_refresh`,
   `ambient_person_detection_trigger_doorbell_test_mode`,
   `ambient_person_detection_trigger_dogz_test_mode`, `dawarich_push_carissa_s_location`,
   `doorbell_notification_phone_and_android_auto`, `ambient_identity_challenge_evaluator`.
-  Root cause is confirmed for 5 of 8 (test-mode pair → inert `.bak` file gated permanently
+  Root cause confirmed for all 8: the test-mode pair → inert `.bak` file gated permanently
   off; `ambient_identity_challenge_evaluator` → superseded per `ambient_context_adjudicator.yaml`'s
   own header; `dawarich_push_carissa_s_location`/Traccar → superseded by the carissa→carrie
-  merge and Dawarich respectively). `frigate_person_alert_doorbell`/`_dog_room` and
-  `doorbell_notification_phone_and_android_auto` have no current file and no documentary trail
-  — most likely pre-ambient-pipeline direct Frigate alerts, but unconfirmed.
+  merge and Dawarich respectively; `frigate_person_alert_doorbell`/`_dog_room` → found verbatim
+  in `automations.yaml.bak-20260823-doorbell-sensor-fix` as direct
+  `binary_sensor.doorbell_person`/`binary_sensor.dogz_person` notifiers, pre-dating the ambient
+  pipeline; `doorbell_notification_phone_and_android_auto` → its entity-registry `unique_id` is
+  a raw timestamp matching a UI-created (not YAML) automation from 2026-09-07, removed without
+  a snapshot ever capturing it.
+  **Status (Phase 0, 2026-09-25): deleted.** Before deleting, swept every active `automations.yaml`,
+  all active `packages/*.yaml`, both blueprints, `scripts.yaml`, `scenes.yaml`, the YAML-mode
+  `sportsintel_dashboard.yaml`, and all 5 registered storage-mode dashboards (`map`, `meal-plan`,
+  `let-s-go`, `home-gen1`, `game-day`, confirmed via `lovelace/dashboards/list`) for a reference
+  to any of the 8 — zero references found in any of them. `.storage/lovelace.home_command` did
+  contain two tile cards for `frigate_person_alert_doorbell`/`_dog_room`, but that file is **not**
+  a registered dashboard (`lovelace/config` for `url_path=home-command` returns
+  `config_not_found`) — nothing loads it, so there was no live dead tile. Moved to
+  `/config/backups/` as part of this cleanup rather than left in place. All 8 entities removed
+  from the entity registry; HA restarted; log tail confirmed clean (see below).
 - **`sports_wvu_soccer_goal_win_celebration`** is toggled off live with no `enabled: false` in
   YAML and no comment anywhere explaining why — worth asking Paul whether that's intentional.
 - **`car_arrival_visitor_check`** is `enabled: false` in YAML with a clear documented reason
@@ -316,16 +329,17 @@ frequently either don't notify at all (`wvu_soccer_fallback_refresh`,
   relay, not to this HA instance's credentials.
 - **`packages/dawarich_push.yaml`** and **`packages/dawarich_stats.yaml`** — four distinct
   Dawarich API keys (one per Paul/Shaughn/Trevar/Carrie) are hardcoded directly in
-  `rest_command`/`resource` URLs as `?api_key=...` query parameters — 9 occurrences total
-  across the two files (5 in `dawarich_push.yaml`, including a `dawarich_stats_pm_test`
-  diagnostic reusing Paul's key; 4 in `dawarich_stats.yaml`), live and in active use. The same
-  four keys also persisted in `dawarich_push.yaml.bak-20260823-carrie-carissa-fix`, moved to
-  `/config/backups/` during Phase 0 cleanup (2026-09-25) pending rotation. This is a more
-  material exposure than the TURN credential since these are active service credentials
-  sitting in plain-text YAML. **Status (Phase 0): remediation in progress** — Paul rotates the
-  4 keys in Dawarich directly (no API access from this session) and adds them to
-  `secrets.yaml` himself (write-restricted to this session by design); the package files then
-  switch to `!secret` references.
+  `rest_command`/`resource` URLs as `?api_key=...` query parameters — 8 occurrences total
+  across the two files (4 in each), live and in active use. The same four keys also persisted
+  in `dawarich_push.yaml.bak-20260823-carrie-carissa-fix`, moved to `/config/backups/` during
+  Phase 0 cleanup (2026-09-25) pending rotation. This is a more material exposure than the TURN
+  credential since these are active service credentials sitting in plain-text YAML.
+  **Status (Phase 0): remediation in progress** — the unused `dawarich_stats_pm_test`
+  diagnostic `rest_command` (a 5th, redundant occurrence of Paul's key, never called by any
+  automation) was deleted outright rather than migrated. Paul rotates the 4 real keys in
+  Dawarich directly (no API access from this session) and adds them to `secrets.yaml` himself
+  (write-restricted to this session by design); the package files then switch to `!secret`
+  references.
 
 ---
 
