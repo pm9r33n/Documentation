@@ -255,8 +255,15 @@ frequently either don't notify at all (`wvu_soccer_fallback_refresh`,
   `config_not_found`) — nothing loads it, so there was no live dead tile. Moved to
   `/config/backups/` as part of this cleanup rather than left in place. All 8 entities removed
   from the entity registry; HA restarted; log tail confirmed clean (see below).
-- **`sports_wvu_soccer_goal_win_celebration`** is toggled off live with no `enabled: false` in
-  YAML and no comment anywhere explaining why — worth asking Paul whether that's intentional.
+- **`sports_wvu_soccer_goal_win_celebration`** was toggled off live with no `enabled: false` in
+  YAML and no comment anywhere explaining why. **Status (Phase 0, 2026-09-25): deleted.** Removed
+  from `automations.yaml` via full-file rewrite (SHA-guarded, read back and verified). The reload
+  left behind an orphaned entity-registry entry (`unavailable`, `config_entry_id: null` — same
+  pattern as Finding 3's other 8 orphans), removed via `config/entity_registry/remove`. Confirmed
+  gone (`not_found` on lookup). `wvu_game_day_assistant` (retired in Phase 3, once `/game-day`
+  Brains replaces it) was not touched — verified unchanged `modified_at` before and after. `ha
+  core check` was clean both before and after; log tail post-reload showed no new errors tied to
+  this change (see below).
 - **`car_arrival_visitor_check`** is `enabled: false` in YAML with a clear documented reason
   (superseded by the ambient pipeline), but its live state is `unavailable` rather than the
   `off` you'd expect for an explicitly-disabled automation — a minor registry-state oddity,
