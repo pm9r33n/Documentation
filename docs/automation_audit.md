@@ -266,8 +266,10 @@ frequently either don't notify at all (`wvu_soccer_fallback_refresh`,
   this change (see below).
 - **`car_arrival_visitor_check`** is `enabled: false` in YAML with a clear documented reason
   (superseded by the ambient pipeline), but its live state is `unavailable` rather than the
-  `off` you'd expect for an explicitly-disabled automation — a minor registry-state oddity,
-  not a config problem.
+  `off` you'd expect for an explicitly-disabled automation. **Status (Phase 0, 2026-09-25): no
+  change.** Root cause: invalid top-level `enabled: false` → fails validation, so it's dead, not
+  disabled. Fix in Phase 2 during the dispatcher migration: remove the key and use the entity
+  state.
 - `packages/_diag_frigate_snapshot.yaml` and `packages/zzdiag_frigate_snapshot.yaml` are both
   comment-only/dead — already known per CLAUDE.md (`_`-prefixed slug never loads); no new
   issue, noted for completeness.
