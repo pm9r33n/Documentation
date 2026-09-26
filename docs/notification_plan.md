@@ -139,7 +139,21 @@ A final sweep on 2026-09-25 confirmed these 5 are the *only* remaining direct
   unknown person during quiet hours → P1 (urgent enough to bypass), unknown person outside quiet
   hours → P2, known family match → P4 (log only — the family arrival/departure automations
   already push for that same event under `arrival_<person>`/`departure_<person>`, so a second
-  real push would be noise).
+  real push would be noise). **Superseded by the TEMPORARY override below as of 2026-09-25.**
+- **TEMPORARY 2026-09-25 (field test fix, `packages/ambient_identity_consumer.yaml`):** the
+  P1-at-night branch above is disabled. Unknown person now always dispatches at tier 2,
+  regardless of quiet hours; known still dispatches at P4. Reason: a field test the same day
+  showed ~1/3 of family visits resolving as "Unknown person" due to Identity Resolution
+  vote-logic bugs (same-event frames counted as independent observations, "unknown" itself
+  counted as a vote, no multi-face handling, no late-observation hold) — P1 was paging Paul
+  overnight for known family members misclassified as unknown.
+  **Revert condition:** restore the P1-at-night branch (unknown during quiet hours → P1) once
+  the vote-logic fixes are in (same-event frames = 1 observation, "unknown" not a vote,
+  multi-face handling, late-observation hold) **and** there's a clean week with no false
+  "unknown person" resolutions. Tested 2026-09-25: forced `input_boolean.quiet_hours_force` on,
+  called `script.notify_dispatch` with a fake `ambient_unknown_*` tier-2 tag, confirmed logbook
+  entry `tier 2 | ... | held | quiet hours active, added to digest`, then cleared the test entry
+  from `sensor.notify_dispatch_digest` before releasing the override.
 - Garage "Open on Approach" — Paul's branch is P4 (log only; opening the garage is itself the
   useful signal, a push isn't necessary), Carrie's branch is P2 routed to Paul (per §6).
 - Digest (P2-during-quiet-hours) fails open and sends immediately if the digest store itself is
