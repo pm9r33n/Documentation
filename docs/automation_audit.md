@@ -15,6 +15,48 @@ gate the notification behind a latch/dedup check. This is called out per-row bel
 
 ---
 
+## Phase 2 close-out update (2026-09-25) — dispatcher migration complete
+
+Everything below this point (Summary, matrix, per-domain tables, Findings) is left exactly as
+authored: a Phase 0, pre-migration snapshot. Since that snapshot, Phase 1 built
+`script.notify_dispatch` (`packages/notify_dispatch.yaml`) and Phase 2 migrated every
+non-exempt notifying automation to call it instead of `notify.mobile_app_*` directly. Full
+tier/quiet-hours/tag reference: `docs/notification_plan.md`.
+
+**Corrected direct-`notify.mobile_app_*`-call count: 5** (down from the ~18 call sites the
+table below shows), all deliberately left alone:
+
+*Exempt — Morning Digest, pending Phase 5 (non-Paul recipients):*
+1. `1755691200001` "Morning Digest – Paul and Carrie" — Carrie is a non-Paul recipient
+2. `1755691200002` "Morning Digest – Shaughn"
+3. `1755691200003` "Morning Digest – Trevar"
+
+*Out of scope for Phase 2 — deferred to Phase 3 (sports):*
+4. `sportsintel_notification_dispatcher` (`packages/sportsintel_notify.yaml`)
+5. `wvu_game_day_assistant` (`automations.yaml` id `1785189936797`, blueprint
+   `paul/wvu_game_day_assistant.yaml`)
+
+Every other automation shown below with a `notify.mobile_app_pm9r33n` destination —
+`family_tracker_health_check`, `family_notify_school_arrivals`/`_departures`,
+`family_notify_when_<person>_arrives_home`/`_leaves_home`, `family_diagnostic_reporting_stale_check`,
+`family_notify_when_paul_leaves_work`, `garage_door_auto_close_at_night`/`_on_storm`,
+`garage_door_open_on_storm_arrival`/`_on_approach_paul`, `ambient_identity_resolution_consumer`,
+and `goodnight_check_10_30_pm` — now calls `script.notify_dispatch` (tier 2 unless noted
+otherwise in `notification_plan.md`; the Paul branch of `garage_door_open_on_approach_paul` is
+tier 4). Treat any "Notifies: notify.mobile_app_*" cell below as superseded unless the
+automation is in one of the two lists above.
+
+**Finding 5 status (Garage Open on Approach, Carrie's branch notifying Paul's phone):**
+resolved by explicit design, not by giving Carrie her own push. The dispatcher's
+`recipient_map` is Paul-only until Phase 5, so Carrie's branch now calls
+`script.notify_dispatch` tier 2 with `recipients: [paul]` set explicitly — same delivery
+target as before, but now a documented decision instead of an unexplained copy/paste artifact.
+
+Final sweep (2026-09-25) confirmed zero automations outside the two lists above still call
+`notify.mobile_app_*` directly.
+
+---
+
 ## (a) Summary
 
 | | |
