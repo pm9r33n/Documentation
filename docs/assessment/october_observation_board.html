@@ -1,0 +1,515 @@
+<title>WVU Observation Board</title>
+<style>
+/* Layout: sticky timeline header (Thu / Sat) selects an active window; below,
+   a stacked set of event cards (each with Before/In-Game/Final tabs) sized
+   to the active window, a Cross-Event panel for Saturday, a shared Evidence
+   Log, and a collapsible Reference drawer. Dark scoreboard console by
+   default, with a full light readable palette. */
+:root{
+  --bg:#0b1622; --surface:#101e2e; --surface2:#152841; --ink:#edeff2; --muted:#93a0af;
+  --line:#223247; --gold:#eaaa00; --navy-accent:#8fb4ff;
+  --ok:#3fb27f; --warn:#e0922a; --bad:#ff6659; --ask:#b39ddb;
+  --chip-bg:#1a2c42;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#f6f3ec; --surface:#ffffff; --surface2:#fbf8f1; --ink:#14202e; --muted:#5b6472;
+    --line:#e3dfd3; --gold:#c98d00; --navy-accent:#0a2f63;
+    --ok:#2e7d4f; --warn:#a85e08; --bad:#b3261e; --ask:#6750a4;
+    --chip-bg:#eee7d6;
+    color-scheme:light;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#f6f3ec; --surface:#ffffff; --surface2:#fbf8f1; --ink:#14202e; --muted:#5b6472;
+  --line:#e3dfd3; --gold:#c98d00; --navy-accent:#0a2f63;
+  --ok:#2e7d4f; --warn:#a85e08; --bad:#b3261e; --ask:#6750a4;
+  --chip-bg:#eee7d6;
+  color-scheme:light;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);margin:0;font-family:"Source Sans 3",system-ui,sans-serif;}
+h1,h2,h3,.disp{font-family:"Big Shoulders Display",system-ui,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.02em;text-wrap:balance;}
+.mono,input,select,textarea,td.num,.ts{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;}
+a{color:var(--gold)}
+.wrap{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:20px 60px;}
+
+/* header */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);}
+.top-inner{max-width:1100px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.top-inner h1{font-size:clamp(20px,3vw,28px);margin:0;color:var(--gold);flex:1 1 auto;min-width:0;}
+.status-pill{font-size:11px;padding:4px 10px;border-radius:99px;border:1px solid var(--line);color:var(--muted);white-space:nowrap;}
+.status-pill.live{color:var(--ok);border-color:var(--ok);}
+.window-tabs{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+.wtab{font-family:"Big Shoulders Display",sans-serif;text-transform:uppercase;letter-spacing:.03em;font-size:14px;padding:7px 14px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer;}
+.wtab[aria-selected="true"]{background:var(--gold);color:#1a1200;border-color:var(--gold);}
+
+section.window{display:none;margin-top:22px;}
+section.window.active{display:block;}
+
+.window-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+.window-head h2{font-size:clamp(22px,4vw,32px);margin:0;}
+.window-head .sub{color:var(--muted);font-size:14px;}
+
+.cards{display:grid;grid-template-columns:1fr;gap:16px;}
+@media(min-width:760px){.cards.two{grid-template-columns:1fr 1fr;}}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;min-width:0;}
+.card .head{padding:14px 16px;border-bottom:1px solid var(--line);background:var(--surface2);}
+.card .head .team{font-size:19px;margin:0 0 2px;}
+.card .head .meta{color:var(--muted);font-size:13px;display:flex;flex-wrap:wrap;gap:4px 10px;}
+.card .head .meta b{color:var(--ink);font-weight:600;}
+.entity-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.chip{background:var(--chip-bg);border:1px solid var(--line);color:var(--ink);font-size:12px;padding:3px 8px;border-radius:6px;}
+
+.tabs{display:flex;border-bottom:1px solid var(--line);}
+.tab{flex:1;padding:9px 8px;text-align:center;font-family:"Big Shoulders Display",sans-serif;text-transform:uppercase;letter-spacing:.02em;font-size:13px;background:none;border:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;}
+.tab[aria-selected="true"]{color:var(--gold);border-bottom-color:var(--gold);}
+.panel{display:none;padding:12px 16px 16px;}
+.panel.active{display:block;}
+
+.item{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line);}
+.item:last-child{border-bottom:none;}
+.item label.lbl{flex:1 1 220px;min-width:0;font-size:14px;line-height:1.35;}
+.item input[type="checkbox"]{width:17px;height:17px;accent-color:var(--gold);flex:0 0 auto;}
+.item select{background:var(--surface2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:12px;}
+.item input[type="text"]{background:var(--surface2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:12px;min-width:0;}
+.item .note{flex:1 1 160px;}
+.item .ts{flex:0 0 100px;}
+.status-observe{color:var(--ok)}
+.status-backlog{color:var(--muted)}
+.status-ask{color:var(--ask)}
+.status-incident{color:var(--bad);font-weight:700;}
+
+.section-title{display:flex;align-items:center;gap:10px;margin:26px 0 10px;}
+.section-title h2{font-size:clamp(18px,3vw,24px);margin:0;}
+.section-title .line{flex:1;height:1px;background:var(--line);}
+
+/* evidence log */
+.ev-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px;}
+.ev-form label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.03em;}
+.ev-form input,.ev-form select{width:100%;background:var(--surface2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 7px;font-size:13px;}
+.ev-form .full{grid-column:1/-1;}
+.btn{font-family:"Big Shoulders Display",sans-serif;text-transform:uppercase;letter-spacing:.03em;background:var(--gold);color:#1a1200;border:none;border-radius:8px;padding:9px 16px;font-size:14px;cursor:pointer;}
+.btn:disabled{opacity:.5;cursor:default;}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface);}
+table{border-collapse:collapse;width:100%;min-width:820px;}
+th,td{padding:8px 10px;text-align:left;font-size:12.5px;border-bottom:1px solid var(--line);vertical-align:top;}
+th{color:var(--muted);text-transform:uppercase;font-size:10.5px;letter-spacing:.04em;background:var(--surface2);position:sticky;top:0;}
+tr:last-child td{border-bottom:none;}
+.empty-row td{color:var(--muted);font-style:italic;text-align:center;padding:18px;}
+
+/* reference drawer */
+details.ref{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin-top:26px;}
+details.ref summary{cursor:pointer;padding:14px 16px;font-family:"Big Shoulders Display",sans-serif;text-transform:uppercase;letter-spacing:.02em;font-size:16px;color:var(--gold);}
+.ref-body{padding:0 16px 18px;}
+.ref-body h3{font-size:15px;margin:16px 0 8px;}
+.ref-table td,.ref-table th{font-size:12px;}
+.esc{display:grid;grid-template-columns:1fr;gap:8px;margin:8px 0;}
+@media(min-width:640px){.esc{grid-template-columns:1fr 1fr;}}
+.esc div{border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;}
+.esc .t{font-weight:700;display:block;margin-bottom:3px;}
+ol.interp{padding-left:20px;font-size:14px;line-height:1.6;}
+footer.note{margin-top:24px;color:var(--muted);font-size:12px;text-align:center;}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700&family=Source+Sans+3:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<header class="top">
+  <div class="top-inner">
+    <h1>WVU Observation Board</h1>
+    <span class="status-pill" id="statusPill">connecting…</span>
+  </div>
+  <div class="top-inner" style="padding-top:0">
+    <div class="window-tabs" role="tablist" aria-label="Observation window">
+      <button class="wtab" data-window="thu" role="tab" aria-selected="true">Thu Oct 2 — Women's Soccer</button>
+      <button class="wtab" data-window="sat" role="tab" aria-selected="false">Sat Oct 3 — Football + Men's Soccer</button>
+      <button class="wtab" data-window="ref" role="tab" aria-selected="false">Reference</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- THURSDAY WINDOW -->
+  <section class="window active" id="win-thu">
+    <div class="window-head">
+      <h2>Thursday, October 2</h2>
+      <span class="sub">Isolated single-event test — no other WVU sport active</span>
+    </div>
+    <div class="cards" id="cardsThu"></div>
+  </section>
+
+  <!-- SATURDAY WINDOW -->
+  <section class="window" id="win-sat">
+    <div class="window-head">
+      <h2>Saturday, October 3</h2>
+      <span class="sub">Same-day multi-sport test — state cleanup, dashboard priority, notification dedup</span>
+    </div>
+    <div class="cards two" id="cardsSat"></div>
+
+    <div class="section-title"><h2>Cross-Event Stress Checks</h2><div class="line"></div></div>
+    <div class="card" id="crossCard">
+      <div class="panel active" id="crossPanel"></div>
+    </div>
+  </section>
+
+  <!-- EVIDENCE LOG (shared) -->
+  <div class="section-title"><h2>Evidence Log</h2><div class="line"></div></div>
+  <form class="ev-form" id="evForm">
+    <div><label>Local time</label><input type="text" name="ts_local" placeholder="8:04 PM" required></div>
+    <div><label>UTC</label><input type="text" name="ts_utc" placeholder="00:04Z" required></div>
+    <div><label>Team/sport</label>
+      <select name="team">
+        <option>WVU Women's Soccer</option>
+        <option>WVU Football</option>
+        <option>WVU Men's Soccer</option>
+        <option>Cross-event</option>
+      </select>
+    </div>
+    <div><label>Expected state</label><input type="text" name="expected"></div>
+    <div><label>Actual state</label><input type="text" name="actual"></div>
+    <div><label>Sensor update</label><input type="text" name="sensor_update"></div>
+    <div><label>Detector/moment result</label><input type="text" name="detector_result"></div>
+    <div><label>Dashboard result</label><input type="text" name="dashboard_result"></div>
+    <div><label>Notification</label><input type="text" name="notification"></div>
+    <div><label>Error/anomaly</label><input type="text" name="error_anomaly"></div>
+    <div class="full"><label>Evidence reference</label><input type="text" name="reference" placeholder="screenshot name, trace id, log line…"></div>
+    <div class="full"><button type="submit" class="btn" id="evSubmit">Log observation</button></div>
+  </form>
+  <div class="tablewrap">
+    <table>
+      <thead><tr>
+        <th>Local</th><th>UTC</th><th>Team</th><th>Expected</th><th>Actual</th><th>Sensor</th>
+        <th>Detector/Moment</th><th>Dashboard</th><th>Notification</th><th>Error/Anomaly</th><th>Reference</th>
+      </tr></thead>
+      <tbody id="evBody"><tr class="empty-row"><td colspan="11">No observations logged yet — nothing has happened before kickoff.</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- REFERENCE DRAWER -->
+  <details class="ref" id="refDrawer" open>
+    <summary>Reference — event inventory, escalation policy, interpretation rules</summary>
+    <div class="ref-body">
+      <h3>Event inventory</h3>
+      <div class="tablewrap"><table class="ref-table" id="invTable"></table></div>
+
+      <h3>Escalation policy</h3>
+      <div class="esc">
+        <div><span class="t status-observe">Observe only</span>Expected/non-impacting behavior, or a known limitation reproducing as previously documented. Log it; no further action.</div>
+        <div><span class="t status-backlog">Log for backlog</span>Minor issue, no immediate risk. Record for the report; do not act during the window.</div>
+        <div><span class="t status-ask">Ask user before action</span>Correctness/reliability issue that may need a config change. Stop and bring it to Paul before proposing anything.</div>
+        <div><span class="t status-incident">Immediate incident report</span>False notifications, wrong-team attribution, a repeated automation loop, unsafe home behavior, or persistent stale data shown as live. Report immediately — still no unilateral fix.</div>
+      </div>
+      <p style="color:var(--muted);font-size:13px">No category authorizes automatic remediation. This board records and classifies observations; it does not act on them.</p>
+
+      <h3>Interpretation rules</h3>
+      <ol class="interp">
+        <li>Use local time (America/New_York) as the operational timeline.</li>
+        <li>Use UTC for correlation with Home Assistant/API logs.</li>
+        <li>Mark any event-time change, postponement, or source discrepancy with both timestamps.</li>
+        <li>Treat missing evidence as unverified, not failed.</li>
+      </ol>
+    </div>
+  </details>
+
+  <footer class="note">Read-only observation tool. Checklist and evidence state are stored for this board only — nothing here writes to Home Assistant.</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var EVENTS = {
+    thu_womens_soccer: {
+      team:"WVU Women's Soccer", opponent:"at Houston", sport:"soccer",
+      localStart:"Thu Oct 2, 8:00 PM EDT", utcStart:"2026-10-03 00:00Z",
+      primary:"sensor.wvu_soccer", fallback:"sensor.wvu_soccer_fallback",
+      key:"20382:usa.ncaa.w.1", detector:"automation.sportsintel_detector_wvu_women_s_soccer",
+      source:"TeamTracker (ESPN, usa.ncaa.w.1) + espn_schedule fallback",
+      dashboard:"sportsintel_dashboard.yaml (Team Board) + Game Day card TEAMS entry",
+      risk:"Fallback fragility (2 prior in-production bugfixes); ranking-moment repetition; key-shape collision with men's soccer"
+    },
+    sat_football: {
+      team:"WVU Football", opponent:"at Iowa State", sport:"football",
+      localStart:"Sat Oct 3, 12:00 PM EDT", utcStart:"2026-10-03 16:00Z",
+      primary:"sensor.wvu_football", fallback:"— (no fallback package exists for football)",
+      key:"277:college-football", detector:"automation.sportsintel_detector_wvu_football",
+      source:"TeamTracker (ESPN, college-football) only",
+      dashboard:"sportsintel_dashboard.yaml (Team Board) + Game Day card TEAMS entry",
+      risk:"No fallback safety net for this sport if TeamTracker has an outage"
+    },
+    sat_mens_soccer: {
+      team:"WVU Men's Soccer", opponent:"vs South Carolina (#1)", sport:"soccer",
+      localStart:"Sat Oct 3, 7:00 PM EDT", utcStart:"2026-10-03 23:00Z",
+      primary:"sensor.wvu_soccer_men", fallback:"sensor.wvu_soccer_men_fallback",
+      key:"5658:usa.ncaa.m.1", detector:"automation.sportsintel_detector_wvu_men_s_soccer",
+      source:"TeamTracker (ESPN, usa.ncaa.m.1) + espn_schedule fallback",
+      dashboard:"sportsintel_dashboard.yaml (Team Board) + Game Day card TEAMS entry",
+      risk:"Same fallback fragility as women's soccer; postgame-football overlap given same-day adjacency"
+    }
+  };
+
+  var BEFORE = [
+    {id:"b1",label:"Sensor state is PRE"},
+    {id:"b2",label:"Opponent / date / time plausible vs. inventory"},
+    {id:"b3",label:"Recent last_update / last_reported"},
+    {id:"b4",label:"Detector automation is on"},
+    {id:"b5",label:"Detector team_sensor input correct"},
+    {id:"b6",label:"SportsIntel templates available, no errors"},
+    {id:"b7",label:"Fallback sensor healthy (stale:false, error:null)",soccerOnly:true},
+    {id:"b8",label:"Dashboard visibility confirmed"},
+    {id:"b9",label:"No unresolved relevant errors/logs"},
+    {id:"b10",label:"Notification profile + quiet hours recorded (not changed)"},
+    {id:"b11",label:"Game Mode state recorded (not changed)"}
+  ];
+  var INGAME_COMMON = [
+    {id:"i1",label:"PRE → IN transition time recorded",rich:true},
+    {id:"i2",label:"Detector fires once, not repeatedly",rich:true},
+    {id:"i3",label:"Moments/status include correct team key",rich:true},
+    {id:"i4",label:"Score/status updates internally coherent",rich:true},
+    {id:"i5",label:"Data freshness maintained (not frozen)",rich:true},
+    {id:"i6",label:"Men's/women's soccer signals stay isolated",rich:true,soccerOnly:true},
+    {id:"i7",label:"Ranking-current moment behaves correctly",rich:true,soccerOnly:true},
+    {id:"i8",label:"Notifications received match expected tier",rich:true},
+    {id:"i9",label:"No duplicate/missing alert",rich:true},
+    {id:"i10",label:"No dashboard/state anomaly",rich:true},
+    {id:"i11",label:"No automation trace error",rich:true}
+  ];
+  var FOOTBALL_EXTRA = [
+    {id:"sx1",label:"Final/postgame state fully resolves before men's soccer PRE→IN",rich:true}
+  ];
+  var MENS_SOCCER_EXTRA = [
+    {id:"sx2",label:"No football moment/state/Game Mode/notification context leaked in",rich:true},
+    {id:"sx3",label:"Fallback + ranking/context remain independent of football",rich:true},
+    {id:"sx4",label:"Dashboard priority transitions correctly from football to this game",rich:true},
+    {id:"sx5",label:"No delayed football / overtime overlap into pregame or live window",rich:true}
+  ];
+  var THURSDAY_EXTRA = [
+    {id:"tx1",label:"Primary and fallback entities agree (opponent/date/score)",rich:true},
+    {id:"tx2",label:"Single correct team/opponent/event identity maintained",rich:true},
+    {id:"tx3",label:"Ranking-current moment accurate, not repeating unnecessarily",rich:true},
+    {id:"tx4",label:"No cross-contamination with men's soccer entity/fallback",rich:true}
+  ];
+  var FINAL = [
+    {id:"f1",label:"IN → POST/final transition time recorded"},
+    {id:"f2",label:"Final score/result matches reality"},
+    {id:"f3",label:"Final moment/summary coherent"},
+    {id:"f4",label:"Final notification count matches expected tiering"},
+    {id:"f5",label:"Dashboard exits live state cleanly"},
+    {id:"f6",label:"Game Mode restores if it was active"},
+    {id:"f7",label:"Source freshness/stale behavior normal after final"},
+    {id:"f8",label:"No relevant errors/warnings"}
+  ];
+  var CROSS = [
+    {id:"c1",label:"Multiple games PRE simultaneously handled correctly",rich:true},
+    {id:"c2",label:"One game IN while another PRE handled correctly",rich:true},
+    {id:"c3",label:"Near-simultaneous transitions handled correctly",rich:true},
+    {id:"c4",label:"Notification dedup works across different sports",rich:true},
+    {id:"c5",label:"Correct dashboard prioritization among live events",rich:true},
+    {id:"c6",label:"Soccer fallback sensors remain independent of each other",rich:true},
+    {id:"c7",label:"No cross-team entity/league mismatch in moments output",rich:true},
+    {id:"c8",label:"No stale “live” state after a different event changes",rich:true}
+  ];
+
+  function eventChecklist(key){
+    var isSoccer = EVENTS[key].sport === "soccer";
+    var before = BEFORE.filter(function(it){ return !it.soccerOnly || isSoccer; });
+    var ingame = INGAME_COMMON.filter(function(it){ return !it.soccerOnly || isSoccer; }).slice();
+    if(key === "sat_football") ingame = ingame.concat(FOOTBALL_EXTRA);
+    if(key === "sat_mens_soccer") ingame = ingame.concat(MENS_SOCCER_EXTRA);
+    if(key === "thu_womens_soccer") ingame = ingame.concat(THURSDAY_EXTRA);
+    return {before:before, ingame:ingame, final:FINAL};
+  }
+
+  // ---- state (mirrors db docs; defaults when a doc doesn't exist yet) ----
+  var state = { thu_womens_soccer:{}, sat_football:{}, sat_mens_soccer:{}, cross_event:{} };
+  var evidenceRows = [];
+  var db = null, canWrite = false;
+
+  function itemState(evKey, id){
+    var s = (state[evKey] && state[evKey].itemStates) || {};
+    return s[id] || {};
+  }
+
+  function renderItem(evKey, it){
+    var st = itemState(evKey, it.id);
+    var row = document.createElement("div");
+    row.className = "item";
+    var cb = document.createElement("input");
+    cb.type = "checkbox"; cb.checked = !!st.done; cb.disabled = !canWrite;
+    cb.addEventListener("change", function(){ updateItem(evKey, it.id, {done:cb.checked}); });
+    var lbl = document.createElement("label");
+    lbl.className = "lbl"; lbl.textContent = it.label;
+    row.appendChild(cb); row.appendChild(lbl);
+
+    if(it.rich){
+      var sel = document.createElement("select");
+      ["","observe","backlog","ask","incident"].forEach(function(v){
+        var o=document.createElement("option"); o.value=v;
+        o.textContent = v==="" ? "Not yet observed" : v==="observe"?"Observe only":v==="backlog"?"Log for backlog":v==="ask"?"Ask user":"INCIDENT";
+        if(st.status===v) o.selected=true;
+        sel.appendChild(o);
+      });
+      sel.disabled = !canWrite;
+      sel.className = st.status ? "status-"+st.status : "";
+      sel.addEventListener("change", function(){
+        sel.className = sel.value ? "status-"+sel.value : "";
+        updateItem(evKey, it.id, {status:sel.value});
+      });
+      var ts = document.createElement("input");
+      ts.type="text"; ts.className="ts"; ts.placeholder="time"; ts.value = st.ts || ""; ts.disabled=!canWrite;
+      ts.addEventListener("change", function(){ updateItem(evKey, it.id, {ts:ts.value}); });
+      row.appendChild(sel); row.appendChild(ts);
+    }
+    var note = document.createElement("input");
+    note.type="text"; note.className="note"; note.placeholder="note"; note.value = st.note || ""; note.disabled=!canWrite;
+    note.addEventListener("change", function(){ updateItem(evKey, it.id, {note:note.value}); });
+    row.appendChild(note);
+    return row;
+  }
+
+  function updateItem(evKey, id, patch){
+    if(!state[evKey].itemStates) state[evKey].itemStates = {};
+    state[evKey].itemStates[id] = Object.assign({}, state[evKey].itemStates[id]||{}, patch);
+    if(db && canWrite){
+      db.doc("checklists/"+evKey).set(state[evKey]).catch(function(){});
+    }
+  }
+
+  function buildCard(key){
+    var ev = EVENTS[key], cl = eventChecklist(key);
+    var card = document.createElement("div"); card.className="card";
+    card.innerHTML =
+      '<div class="head"><h3 class="team">'+ev.team+'</h3>'+
+      '<div class="meta"><span><b>'+ev.opponent+'</b></span> · '+
+      '<span>'+ev.localStart+'</span> <span class="mono">('+ev.utcStart+')</span></div>'+
+      '<div class="entity-row">'+
+        '<span class="chip mono">'+ev.primary+'</span>'+
+        (ev.fallback && ev.fallback.indexOf("—")!==0 ? '<span class="chip mono">'+ev.fallback+'</span>' : '')+
+        '<span class="chip mono">'+ev.detector+'</span>'+
+      '</div></div>'+
+      '<div class="tabs" role="tablist"><button class="tab" data-p="before" aria-selected="true">Before</button>'+
+      '<button class="tab" data-p="ingame" aria-selected="false">In-Game</button>'+
+      '<button class="tab" data-p="final" aria-selected="false">Final</button></div>'+
+      '<div class="panel active" data-p="before"></div>'+
+      '<div class="panel" data-p="ingame"></div>'+
+      '<div class="panel" data-p="final"></div>';
+
+    ["before","ingame","final"].forEach(function(p){
+      var panel = card.querySelector('.panel[data-p="'+p+'"]');
+      cl[p].forEach(function(it){ panel.appendChild(renderItem(key,it)); });
+    });
+    card.querySelectorAll(".tab").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        card.querySelectorAll(".tab").forEach(function(b){ b.setAttribute("aria-selected", b===btn); });
+        card.querySelectorAll(".panel").forEach(function(p){ p.classList.toggle("active", p.dataset.p===btn.dataset.p); });
+      });
+    });
+    return card;
+  }
+
+  function renderAll(){
+    var cardsThu = document.getElementById("cardsThu"); cardsThu.innerHTML="";
+    cardsThu.appendChild(buildCard("thu_womens_soccer"));
+    var cardsSat = document.getElementById("cardsSat"); cardsSat.innerHTML="";
+    cardsSat.appendChild(buildCard("sat_football"));
+    cardsSat.appendChild(buildCard("sat_mens_soccer"));
+    var crossPanel = document.getElementById("crossPanel"); crossPanel.innerHTML="";
+    CROSS.forEach(function(it){ crossPanel.appendChild(renderItem("cross_event", it)); });
+
+    var inv = document.getElementById("invTable");
+    var rows = ['<tr><th>Field</th><th>Women\'s Soccer (Thu)</th><th>Football (Sat)</th><th>Men\'s Soccer (Sat)</th></tr>'];
+    var fields = [["Opponent","opponent"],["Local start","localStart"],["UTC start","utcStart"],
+      ["Primary sensor","primary"],["Fallback","fallback"],["Team/league key","key"],
+      ["Detector automation","detector"],["Source path","source"],["Dashboard","dashboard"],["Primary risk","risk"]];
+    fields.forEach(function(f){
+      rows.push("<tr><td><b>"+f[0]+"</b></td><td>"+EVENTS.thu_womens_soccer[f[1]]+"</td><td>"+EVENTS.sat_football[f[1]]+"</td><td>"+EVENTS.sat_mens_soccer[f[1]]+"</td></tr>");
+    });
+    inv.innerHTML = rows.join("");
+  }
+
+  function renderEvidence(){
+    var body = document.getElementById("evBody");
+    if(!evidenceRows.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="11">No observations logged yet — nothing has happened before kickoff.</td></tr>';
+      return;
+    }
+    body.innerHTML = evidenceRows.map(function(r){
+      return "<tr><td class='mono'>"+esc(r.ts_local)+"</td><td class='mono'>"+esc(r.ts_utc)+"</td><td>"+esc(r.team)+
+        "</td><td>"+esc(r.expected)+"</td><td>"+esc(r.actual)+"</td><td>"+esc(r.sensor_update)+
+        "</td><td>"+esc(r.detector_result)+"</td><td>"+esc(r.dashboard_result)+"</td><td>"+esc(r.notification)+
+        "</td><td>"+esc(r.error_anomaly)+"</td><td>"+esc(r.reference)+"</td></tr>";
+    }).join("");
+  }
+  function esc(s){ return (s==null?"":String(s)).replace(/[&<>]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c];}); }
+
+  // ---- window tabs ----
+  document.querySelectorAll(".wtab").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      document.querySelectorAll(".wtab").forEach(function(b){ b.setAttribute("aria-selected", b===btn); });
+      var w = btn.dataset.window;
+      document.getElementById("win-thu").classList.toggle("active", w==="thu");
+      document.getElementById("win-sat").classList.toggle("active", w==="sat");
+      document.getElementById("refDrawer").open = (w==="ref") || document.getElementById("refDrawer").open;
+      if(w==="ref"){ document.getElementById("refDrawer").scrollIntoView({behavior:"smooth", block:"start"}); }
+    });
+  });
+
+  // ---- evidence form ----
+  document.getElementById("evForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var fd = new FormData(e.target);
+    var row = {
+      ts_local: fd.get("ts_local"), ts_utc: fd.get("ts_utc"), team: fd.get("team"),
+      expected: fd.get("expected"), actual: fd.get("actual"), sensor_update: fd.get("sensor_update"),
+      detector_result: fd.get("detector_result"), dashboard_result: fd.get("dashboard_result"),
+      notification: fd.get("notification"), error_anomaly: fd.get("error_anomaly"), reference: fd.get("reference"),
+      created_at: new Date().toISOString()
+    };
+    if(db && canWrite){
+      db.collection("evidence").add(row).catch(function(){});
+    } else {
+      evidenceRows.unshift(row); renderEvidence();
+    }
+    e.target.reset();
+  });
+
+  renderAll();
+  renderEvidence();
+
+  // ---- db wiring ----
+  (async function(){
+    try{
+      if(!window.claude || !window.claude.use){ setStatus(false); return; }
+      db = await window.claude.use("db");
+      var user = await window.claude.use("user");
+      if(!db){ setStatus(false); return; }
+      var canWriteResolved = true;
+      try{ if(user && typeof user.can === "function"){ var w = await user.can("data.write"); canWriteResolved = (w !== false); } }catch(e){}
+      canWrite = canWriteResolved;
+      setStatus(true);
+
+      ["thu_womens_soccer","sat_football","sat_mens_soccer","cross_event"].forEach(function(key){
+        db.doc("checklists/"+key).onSnapshot(function(snap){
+          state[key] = snap.exists ? (snap.data()||{}) : {};
+          renderAll();
+        }, function(){ /* degrade silently, local state stands */ });
+      });
+
+      db.collection("evidence").orderBy("created_at","desc").limit(200).onSnapshot(function(qs){
+        evidenceRows = qs.docs.map(function(d){ return d.data(); });
+        renderEvidence();
+      }, function(){});
+    }catch(e){ setStatus(false); }
+  })();
+
+  function setStatus(live){
+    var pill = document.getElementById("statusPill");
+    if(live){ pill.textContent = canWrite ? "synced · shared board" : "synced · read-only"; pill.classList.add("live"); }
+    else { pill.textContent = "local preview only"; pill.classList.remove("live"); }
+  }
+})();
+</script>

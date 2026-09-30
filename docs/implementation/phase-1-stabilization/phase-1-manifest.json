@@ -1,0 +1,242 @@
+{
+  "phase": "sportsintel-phase-1-stabilization",
+  "status": "planning-only",
+  "created": "2026-09-29",
+  "last_updated": "2026-09-29",
+  "source_assessment": "docs/assessment/sports_dashboard_assessment.md",
+  "live_system_modified": false,
+  "git_committed": false,
+  "git_note": "Task instructions explicitly prohibit commit/push/branch/merge/PR for this phase; left uncommitted on purpose, see 00-scope-and-guardrails.md",
+  "reprioritization_log": [
+    {
+      "date": "2026-09-29",
+      "reason": "Baseball season ending; user reprioritized into explicit P1/P2/Defer tiers",
+      "changes": [
+        "source-freshness elevated from priority 3 to P1",
+        "ai-provider-routing relabeled from priority 2 to P1 (already effectively top-tier, now explicit)",
+        "wvu-basketball-men-not-found verification elevated to P1 and executed (read-only) this update",
+        "new initiative added: wvu-womens-basketball-card-coverage (P2, assessed not implemented)",
+        "archive-plan reaffirmed P2, gated on separate approval",
+        "mets-card-parity and wvu-baseball-card-parity explicitly set to Defer",
+        "lighting-consolidation reaffirmed Defer, design-only"
+      ],
+      "files_touched": "planning documents only, no runtime/production/card files",
+      "committed": false
+    }
+  ],
+  "read_only_verification_performed": [
+    {
+      "check": "sensor.ny_knicks / sensor.ny_knicks_display exist",
+      "method": "home_assistant_get_live_context_and_states",
+      "result": "confirmed"
+    },
+    {
+      "check": "www/gd/gd-core.js TEAMS array contents",
+      "method": "home_assistant_read_text_file",
+      "result": "confirmed: WVU Football, WVU Soccer (W), WVU Soccer (M), NY Jets, WVU Basketball (M), NY Knicks present; NY Mets, WVU Basketball (W), WVU Baseball absent"
+    },
+    {
+      "check": "dashboard_backups/ contents",
+      "method": "home_assistant_list_files",
+      "result": "confirmed: single dated subfolder dashboard_backups/2026-09-20/"
+    },
+    {
+      "check": "archive/ contents",
+      "method": "home_assistant_list_files",
+      "result": "confirmed: archive/carrie_carissa_merge_20260921/ exists as precedent"
+    },
+    {
+      "check": "sensor.wvu_basketball_men / _display / sensor.wvu_basketball_women live state",
+      "method": "home_assistant_get_live_context_and_states (include_entity_states=true)",
+      "result": "all report 'PRE', not NOT_FOUND/unavailable; sensor.wvu_basketball_men last_reported 2026-09-29T17:09:21Z (within the hour of check)",
+      "date": "2026-09-29",
+      "caveat": "resolves the question for the current off-season window only; does not rule out a live-game-specific recurrence"
+    }
+  ],
+  "initiatives": [
+    {
+      "id": "knicks-coverage",
+      "tier": "P1",
+      "plan_doc": "02-knicks-coverage-plan.md",
+      "summary": "Register the Knicks in the SportsIntel detector registry and interest-tier map; no new TeamTracker sensor needed.",
+      "files_impacted": [
+        "packages/sportsintel_detectors.yaml",
+        "packages/sportsintel_moments.yaml"
+      ],
+      "files_referenced_not_modified": [
+        "sensor.ny_knicks",
+        "sensor.ny_knicks_display",
+        "packages/sportsintel_context.yaml",
+        "packages/sportsintel_store.yaml",
+        "packages/sportsintel_notify.yaml",
+        "packages/sportsintel_moment_notify.yaml",
+        "www/gd/gd-core.js"
+      ],
+      "files_unconfirmed": [
+        "packages/sports_score_display.yaml"
+      ],
+      "additive_only": true,
+      "requires_live_observation_before_done": true,
+      "executed": false
+    },
+    {
+      "id": "source-freshness",
+      "tier": "P1",
+      "tier_change": "elevated from original priority 3",
+      "plan_doc": "04-source-freshness-plan.md",
+      "summary": "Replace string-match stale/error detection with a timestamp/TTL-based source_status state machine.",
+      "instructions_truncated": true,
+      "fields_given_verbatim": [
+        "observed_at",
+        "source_updated_at",
+        "last_successful_refresh_at",
+        "freshness_seconds",
+        "source_status",
+        "failure_count",
+        "last_error_category"
+      ],
+      "fields_added_to_complete_model": [
+        "source_name",
+        "staleness_threshold_seconds",
+        "consecutive_successes"
+      ],
+      "files_impacted": [
+        "packages/sportsintel_last_seen.yaml",
+        "packages/sportsintel_moments.yaml"
+      ],
+      "files_referenced_not_modified": [
+        "www/gd/gd-core.js"
+      ],
+      "additive_only": true,
+      "requires_live_observation_before_done": true,
+      "executed": false
+    },
+    {
+      "id": "ai-provider-routing",
+      "tier": "P1",
+      "tier_change": "relabeled from original priority 2",
+      "plan_doc": "03-ai-provider-routing-plan.md",
+      "summary": "Replace single-default AI provider selection with an event-class routing table, per-provider circuit breaker, bounded retry, and sanitized structured logging.",
+      "files_impacted": [
+        "packages/sportsintel_ai_provider.yaml",
+        "packages/sportsintel_helpers.yaml"
+      ],
+      "files_referenced_not_modified": [
+        "packages/sportsintel_ai_brief.yaml",
+        "packages/sportsintel_response_qa.yaml"
+      ],
+      "additive_only": true,
+      "requires_live_observation_before_done": true,
+      "executed": false
+    },
+    {
+      "id": "wvu-basketball-men-not-found-verification",
+      "tier": "P1",
+      "plan_doc": "05-open-question-verification-plan.md",
+      "summary": "Read-only check of whether sensor.wvu_basketball_men returns NOT_FOUND.",
+      "status": "resolved",
+      "executed": true,
+      "result": "sensor reports PRE, last_reported within the hour; NOT_FOUND not observed for the current off-season window",
+      "live_system_modified": false
+    },
+    {
+      "id": "open-question-verification-other",
+      "plan_doc": "05-open-question-verification-plan.md",
+      "summary": "Remaining open-question tracking from the original assessment.",
+      "questions": [
+        {
+          "question": "Is NY Mets in the Game Day card's TEAMS array?",
+          "status": "resolved",
+          "answer": "no; WVU Basketball Women and WVU Baseball are also absent"
+        },
+        {
+          "question": "What is in dashboard_backups/?",
+          "status": "resolved",
+          "answer": "single dated subfolder, dashboard_backups/2026-09-20/"
+        }
+      ]
+    },
+    {
+      "id": "wvu-womens-basketball-card-coverage",
+      "tier": "P2",
+      "plan_doc": "05-open-question-verification-plan.md",
+      "summary": "Add WVU Women's Basketball to the Game Day card's TEAMS array, mirroring the existing Men's entry.",
+      "assessment": "low-risk, close fit to existing model — sensor.wvu_basketball_women already live; NEWS_TAGS already has a wvu_basketball_women entry; TEAMS is a flat array literal with no team-count-dependent logic observed",
+      "gated_on": "separate approval for card-file edits",
+      "executed": false,
+      "files_would_be_impacted": ["www/gd/gd-core.js"]
+    },
+    {
+      "id": "archive-plan",
+      "tier": "P2",
+      "plan_doc": "06-archive-plan.md",
+      "summary": "Proposed (not executed) relocation of confirmed-unreferenced clutter into a dated archive folder, following existing convention.",
+      "gated_on": "separate approval",
+      "candidates": [
+        {"file": "gd-command-card.v6.bak.js", "size_bytes": 52977},
+        {"file": "sportsintel_probe_jets_gb_summary.json", "size_bytes": 597248},
+        {"file": "sportsintel_probe_wvu_va_actual_summary.json", "size_bytes": 546246},
+        {"file": "sportsintel_probe_wvu_va_summary.json", "size_bytes": 525172}
+      ],
+      "proposed_destination": "archive/sportsintel_dashboard_cleanup_<date>/",
+      "executed": false
+    },
+    {
+      "id": "mets-card-parity",
+      "tier": "Defer",
+      "plan_doc": "05-open-question-verification-plan.md",
+      "summary": "Add NY Mets to the Game Day card's TEAMS array.",
+      "defer_condition": "unless it blocks existing Mets tracking or postseason use — neither is currently true (Mets tracking already works independent of the card)",
+      "executed": false
+    },
+    {
+      "id": "wvu-baseball-card-parity",
+      "tier": "Defer",
+      "plan_doc": "05-open-question-verification-plan.md",
+      "summary": "Add WVU Baseball to the Game Day card's TEAMS array.",
+      "defer_condition": "until closer to next baseball season",
+      "executed": false
+    },
+    {
+      "id": "baseball-broad-work",
+      "tier": "Defer",
+      "summary": "Any broad baseball-specific enrichment, automation, or UI work beyond what already exists.",
+      "note": "no plan in this phase proposed any such work; deferral made explicit per reprioritization instruction",
+      "executed": false
+    },
+    {
+      "id": "lighting-consolidation",
+      "tier": "Defer",
+      "plan_doc": "07-lighting-consolidation-design.md",
+      "summary": "Design (not implemented) for collapsing 21 near-duplicate per-team lighting automations into ~9 blueprint instances, mirroring the existing sportsintel_detectors.yaml pattern.",
+      "status": "design retained, implementation not scheduled",
+      "option_chosen": "B - blueprint per team",
+      "option_rejected": "A - single template-driven automation",
+      "files_impacted_at_future_implementation": [
+        "automations.yaml",
+        "new blueprint file (path TBD)"
+      ],
+      "migration_style": "parallel run per team, old automation removed only after real-game validation",
+      "executed": false
+    }
+  ],
+  "cross_cutting": {
+    "validation_and_rollback_doc": "08-validation-and-rollback-plan.md",
+    "all_initiatives_additive_and_revertible": true,
+    "done_definition": "each initiative validated against at least one real occurrence of the condition it addresses, not just a passing config check"
+  },
+  "files_explicitly_out_of_scope_for_this_phase": [
+    "configuration.yaml",
+    "secrets.yaml",
+    "custom_components/teamtracker/**",
+    "packages/sportsintel_espn_football.yaml",
+    "packages/sportsintel_rankings.yaml",
+    "packages/wvu_alumni_fetch.yaml",
+    "packages/wvu_soccer_fallback.yaml",
+    "packages/sports_game_day.yaml",
+    "www/gd/*.js",
+    "www/gd-command-card.js",
+    "sportsintel_dashboard.yaml",
+    ".storage/**"
+  ]
+}
