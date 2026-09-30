@@ -4,3 +4,8 @@
 .idea
 .DS_Store
 _build
+
+# Face-recognition evidence / family images — never belongs in this repo
+_review/
+_review/shim_evidence_*/
+shim_evidence_*/
