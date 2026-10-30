@@ -1,0 +1,140 @@
+[
+ {
+  "entity_id": "cover.ratgdov2_5i_e45c0a_door",
+  "state": "open",
+  "last_changed": "2026-10-30T17:00:00+00:00",
+  "attributes": {}
+ },
+ {
+  "entity_id": "person.paul_green",
+  "state": "not_home",
+  "last_changed": "2026-10-29T12:00:00+00:00",
+  "attributes": {}
+ },
+ {
+  "entity_id": "person.carrie",
+  "state": "not_home",
+  "last_changed": "2026-10-29T12:00:00+00:00",
+  "attributes": {}
+ },
+ {
+  "entity_id": "person.shaughn",
+  "state": "not_home",
+  "last_changed": "2026-10-29T12:00:00+00:00",
+  "attributes": {}
+ },
+ {
+  "entity_id": "person.trevar",
+  "state": "not_home",
+  "last_changed": "2026-10-29T12:00:00+00:00",
+  "attributes": {}
+ },
+ {
+  "entity_id": "binary_sensor.dogz_person_occupancy",
+  "state": "off",
+  "last_changed": "2026-10-29T12:00:00+00:00",
+  "attributes": {}
+ },
+ {
+  "entity_id": "binary_sensor.porch_person_occupancy",
+  "state": "off",
+  "last_changed": "2026-10-29T12:00:00+00:00",
+  "attributes": {}
+ },
+ {
+  "entity_id": "binary_sensor.reolink_doorbell_person_occupancy",
+  "state": "off",
+  "last_changed": "2026-10-29T12:00:00+00:00",
+  "attributes": {}
+ },
+ {
+  "entity_id": "binary_sensor.doorbell_person",
+  "state": "off",
+  "last_changed": "2026-10-29T12:00:00+00:00",
+  "attributes": {}
+ },
+ {
+  "entity_id": "binary_sensor.loveshack_occupancy",
+  "state": "off",
+  "last_changed": "2026-10-29T12:00:00+00:00",
+  "attributes": {}
+ },
+ {
+  "entity_id": "binary_sensor.upstairs_occupancy",
+  "state": "off",
+  "last_changed": "2026-10-29T12:00:00+00:00",
+  "attributes": {}
+ },
+ {
+  "entity_id": "binary_sensor.trevar_occupancy",
+  "state": "off",
+  "last_changed": "2026-10-29T12:00:00+00:00",
+  "attributes": {}
+ },
+ {
+  "entity_id": "binary_sensor.akamatis_smart_device_1c921c_presence",
+  "state": "off",
+  "last_changed": "2026-10-29T12:00:00+00:00",
+  "attributes": {}
+ },
+ {
+  "entity_id": "binary_sensor.ratgdov2_5i_e45c0a_motion",
+  "state": "off",
+  "last_changed": "2026-10-29T12:00:00+00:00",
+  "attributes": {}
+ },
+ {
+  "entity_id": "light.carrie",
+  "state": "on",
+  "last_changed": "2026-10-30T10:00:00+00:00",
+  "attributes": {}
+ },
+ {
+  "entity_id": "light.pops",
+  "state": "off",
+  "last_changed": "2026-10-29T12:00:00+00:00",
+  "attributes": {}
+ },
+ {
+  "entity_id": "light.ratgdov2_5i_e45c0a_light",
+  "state": "off",
+  "last_changed": "2026-10-29T12:00:00+00:00",
+  "attributes": {}
+ },
+ {
+  "entity_id": "camera.reolink_doorbell",
+  "state": "idle",
+  "last_changed": "2026-10-29T12:00:00+00:00",
+  "attributes": {}
+ },
+ {
+  "entity_id": "camera.backyard_live_view",
+  "state": "idle",
+  "last_changed": "2026-10-29T12:00:00+00:00",
+  "attributes": {}
+ },
+ {
+  "entity_id": "camera.dogz",
+  "state": "idle",
+  "last_changed": "2026-10-29T12:00:00+00:00",
+  "attributes": {}
+ },
+ {
+  "entity_id": "sensor.backyard_battery",
+  "state": "100",
+  "last_changed": "2026-10-29T12:00:00+00:00",
+  "attributes": {}
+ },
+ {
+  "entity_id": "light.tv_lampz",
+  "state": "on",
+  "last_changed": "2026-10-29T12:00:00+00:00",
+  "attributes": {}
+ },
+ {
+  "entity_id": "fan.tv_room_fan",
+  "state": "on",
+  "last_changed": "2026-10-29T12:00:00+00:00",
+  "attributes": {}
+ }
+]

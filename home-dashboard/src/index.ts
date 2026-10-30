@@ -12,3 +12,8 @@ export * from "./activity";
 export * from "./engine";
 export * from "./homeScreen";
 export * from "./learning";
+export { haConfig } from "./config.ha";
+export * from "./ha/transport";
+export * from "./ha/haAdapter";
+export * from "./ha/wsClient";
+export * from "./ha/runner";

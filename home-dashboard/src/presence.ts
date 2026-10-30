@@ -3,8 +3,11 @@ import type { HomeConfig } from "./config";
 import { classifySignals, type SignalStatus } from "./signals";
 import { ZONES, type HomeSnapshot, type Zone } from "./types";
 
+/** "unmonitored": the zone is deliberately configured with no sensors (yard/backyard only); it never counts as presence. */
+export type ZoneStatus = SignalStatus | "unmonitored";
+
 export interface ZonePresence {
-  status: SignalStatus;
+  status: ZoneStatus;
   /** Raw, instantaneous verdict. */
   rawPresent: boolean;
   /**
@@ -26,7 +29,12 @@ export function zoneSensors(config: HomeConfig, zone: Zone): string[] {
 export function computePresence(snap: HomeSnapshot, config: HomeConfig): PresenceByZone {
   const out = {} as PresenceByZone;
   for (const z of ZONES) {
-    const r = classifySignals(zoneSensors(config, z), snap);
+    const sensors = zoneSensors(config, z);
+    if (sensors.length === 0) {
+      out[z] = { status: "unmonitored", rawPresent: false, present: false };
+      continue;
+    }
+    const r = classifySignals(sensors, snap);
     const stable = r.clearSince !== null && snap.now - r.clearSince >= FIXED.presenceStableMs;
     out[z] = { status: r.status, rawPresent: r.present, present: r.present || !stable };
   }

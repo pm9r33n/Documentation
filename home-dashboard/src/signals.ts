@@ -10,6 +10,7 @@ export interface SignalResult {
   clearSince: number | null;
 }
 
+const isTracker = (id: string): boolean => id.startsWith("person.") || id.startsWith("device_tracker.");
 const DETECTED = new Set(["on", "home", "detected", "occupied"]);
 const CLEAR = new Set(["off", "not_home", "clear"]);
 
@@ -27,7 +28,14 @@ export function classifySignals(entityIds: string[], snap: HomeSnapshot): Signal
   for (const id of entityIds) {
     const e = snap.entities[id];
     if (!e) unknown++;
-    else if (DETECTED.has(e.state)) detected++;
+    else if (isTracker(id) && e.state !== "unknown" && e.state !== "unavailable") {
+      // person.* / device_tracker.*: "home" is presence; any other known state (not_home, a zone name like "Work") is away.
+      if (e.state === "home") detected++;
+      else {
+        clear++;
+        clearSince = Math.max(clearSince, e.lastChanged);
+      }
+    } else if (DETECTED.has(e.state)) detected++;
     else if (CLEAR.has(e.state)) {
       clear++;
       clearSince = Math.max(clearSince, e.lastChanged);

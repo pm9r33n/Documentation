@@ -25,6 +25,10 @@ export interface HomeConfig {
   importantDevices: ImportantDevice[];
 }
 
+/** Zones with no sensors at all. They are ignored by the presence rules (a configured-but-unavailable sensor still counts as presence). */
+export const unmonitoredZones = (c: HomeConfig): Zone[] =>
+  ZONES.filter((z) => c.zones[z].length + (z === "house" ? c.rooms.length : 0) === 0);
+
 /** Throws on a config that would silently weaken the presence rules. */
 export function validateConfig(c: HomeConfig): void {
   const ids = new Set<string>();
@@ -33,9 +37,7 @@ export function validateConfig(c: HomeConfig): void {
     ids.add(r.id);
     if (r.occupancySensors.length === 0) throw new Error(`room ${r.id} has no occupancy sensor`);
   }
-  for (const z of ZONES) {
-    const n = c.zones[z].length + (z === "house" ? c.rooms.length : 0);
-    if (n === 0) throw new Error(`zone ${z} has no presence sensor`);
-  }
+  // Yard/backyard may be deliberately unmonitored; the house must always have sensors.
+  if (unmonitoredZones(c).includes("house")) throw new Error("zone house has no presence sensor");
   if (!c.garage.doorEntity) throw new Error("garage.doorEntity is required");
 }

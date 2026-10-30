@@ -1,8 +1,10 @@
 # home-dashboard
 
 Framework-agnostic TypeScript core for the context-aware home screen (see `TECHNICAL_DESIGN.md` in the handoff).
-Home Assistant sits behind `HomeAdapter` (`src/adapter.ts`); only a `StubAdapter` exists so far.
-Entities/rooms live in `src/config.placeholder.ts` (placeholder; replace with the real config of the same shape).
+Home Assistant sits behind `HomeAdapter` (`src/adapter.ts`). `StubAdapter` is for tests; `src/ha/` has the real one:
+`HaWebSocketClient` (long-lived token, WebSocket API) -> `HaAdapter` (allowlisted light/fan/cover services only) -> `HomeRunner` (live state, ticks the engine, skips ticks while disconnected).
+Real entities: `src/config.ha.ts` (see its header for v1 scope decisions). `config.placeholder.ts` is used by tests.
+Tests never open a network connection (fake socket/transport + `test/fixtures/states.json`). Nothing in the repo instantiates a live client yet.
 
     npm install && npm run typecheck && npm test
 

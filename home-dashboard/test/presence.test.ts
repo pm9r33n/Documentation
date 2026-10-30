@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { computePresence, nobodyAnywhere } from "../src/presence";
 import { classifySignals } from "../src/signals";
-import { validateConfig } from "../src/config";
+import { unmonitoredZones, validateConfig } from "../src/config";
 import { buildContext } from "../src/context";
 import { config, min, snap } from "./helpers";
 
@@ -48,9 +48,23 @@ describe("presence", () => {
     expect(P({ "binary_sensor.house_person_detected": ["off", 5_000] }).house.present).toBe(true);
   });
 
-  it("validateConfig rejects a zone with no sensors", () => {
-    expect(() => validateConfig({ ...config, zones: { ...config.zones, backyard: [] } })).toThrow(/backyard/);
-    expect(() => validateConfig(config)).not.toThrow();
+  it("a zone configured with no sensors is unmonitored and never blocks", () => {
+    const c = { ...config, zones: { ...config.zones, backyard: [] } };
+    expect(() => validateConfig(c)).not.toThrow();
+    expect(unmonitoredZones(c)).toEqual(["backyard"]);
+    const p = computePresence(snap(), c);
+    expect(p.backyard).toEqual({ status: "unmonitored", rawPresent: false, present: false });
+    expect(nobodyAnywhere(p)).toBe(true);
+  });
+  it("a configured-but-unavailable sensor still blocks (only 'no sensors' is ignored)", () => {
+    expect(P({ "binary_sensor.backyard_person_detected": "unavailable" }).backyard.present).toBe(true);
+  });
+  it("house with no sensors is rejected; person trackers: home = presence, other states = away", () => {
+    expect(() => validateConfig({ ...config, rooms: [], zones: { ...config.zones, house: [] } })).toThrow(/house/);
+    const s = snap({ "person.a": "home", "person.b": "Work", "person.c": "not_home" });
+    expect(classifySignals(["person.a"], s).present).toBe(true);
+    expect(classifySignals(["person.b", "person.c"], s)).toMatchObject({ status: "clear", present: false });
+    expect(classifySignals(["person.b"], snap({ "person.b": "unavailable" })).status).toBe("unknown");
   });
 });
 
