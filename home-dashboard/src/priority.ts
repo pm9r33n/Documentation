@@ -5,6 +5,7 @@ import type { DetectedIssue, Issue, IssueKind, TimeOfDay } from "./types";
 export const BASE_SCORES: Record<IssueKind, number> = {
   garage_open_long: 90, // safety 90-100
   door_open_late: 90, // safety 90-100
+  garage_open_uncertain: 90, // safety 90-100, notify-only
   fan_left_on: 70, // waste 70-89, low-stakes end
   critical_battery: 70, // device health 60-79
   device_offline_long: 62, // device health 60-79

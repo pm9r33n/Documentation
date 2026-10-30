@@ -37,3 +37,15 @@ export const presentZones = (p: PresenceByZone): Zone[] => ZONES.filter((z) => p
 
 /** Garage auto-close (and the garage / late-door issues) require this: all three zones stably clear. */
 export const nobodyAnywhere = (p: PresenceByZone): boolean => presentZones(p).length === 0;
+
+/**
+ * Nobody is positively detected anywhere, yet at least one zone has a missing /
+ * unavailable sensor, so "nobody here" can't be trusted. A zone whose sensors
+ * disagree ("conflicting") contains a positive detection, so it counts as
+ * confirmed presence here: otherwise any household with one idle room sensor
+ * would trip this. Mutually exclusive with `nobodyAnywhere`.
+ */
+export const presenceUncertain = (p: PresenceByZone): boolean => {
+  const s = ZONES.map((z) => p[z].status);
+  return !s.includes("present") && !s.includes("conflicting") && s.includes("unknown");
+};

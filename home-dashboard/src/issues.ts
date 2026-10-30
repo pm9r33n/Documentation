@@ -1,9 +1,9 @@
 import type { HomeConfig } from "./config";
 import type { EngineContext } from "./context";
 import { DEFAULT_THRESHOLDS, FIXED, MS, type Thresholds } from "./constants";
-import { nobodyAnywhere } from "./presence";
+import { nobodyAnywhere, presenceUncertain } from "./presence";
 import { formatDuration, iso, lastNightStart } from "./time";
-import type { DetectedIssue, HomeSnapshot } from "./types";
+import { ZONES, type DetectedIssue, type HomeSnapshot } from "./types";
 
 type Detector = (snap: HomeSnapshot, config: HomeConfig, ctx: EngineContext, t: Thresholds) => DetectedIssue[];
 
@@ -27,6 +27,35 @@ const garageOpenLong: Detector = (snap, config, ctx, t) => {
       can_auto: true,
       auto_conditions_met: ctx.state.auto_actions_enabled,
       revert_action: "open_garage",
+      created_at: iso(door.lastChanged),
+      subject: "garage",
+      targets: [config.garage.doorEntity],
+    },
+  ];
+};
+
+/**
+ * Keeps an open garage from going silent when presence sensors are down or
+ * disagree. Notify-only by construction: never automatic, no revert.
+ */
+const garageOpenUncertain: Detector = (snap, config, ctx, t) => {
+  const door = snap.entities[config.garage.doorEntity];
+  if (!door || door.state !== "open") return [];
+  const openMs = snap.now - door.lastChanged;
+  if (openMs < t.garageOpenMin * MS.MIN) return [];
+  if (!presenceUncertain(ctx.presence)) return [];
+  const bad = ZONES.filter((z) => ctx.presence[z].status === "unknown").map((z) => `${z} sensor unavailable`);
+  return [
+    {
+      id: "garage_open_uncertain",
+      kind: "garage_open_uncertain",
+      type: "safety",
+      title: `Garage open ${formatDuration(openMs)}, can't confirm anyone is around`,
+      reason: `Presence unconfirmed: ${bad.join(", ")}`,
+      suggested_action: "notify",
+      can_auto: false,
+      auto_conditions_met: false,
+      revert_action: null,
       created_at: iso(door.lastChanged),
       subject: "garage",
       targets: [config.garage.doorEntity],
@@ -149,6 +178,7 @@ const doorOpenLate: Detector = (snap, config, ctx) => {
 
 const DETECTORS: Detector[] = [
   garageOpenLong,
+  garageOpenUncertain,
   leftOn("lights_left_on", (t) => t.lightsEmptyMin),
   leftOn("fan_left_on", (t) => t.fanEmptyMin),
   criticalBattery,

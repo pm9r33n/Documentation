@@ -4,6 +4,7 @@ export type Zone = (typeof ZONES)[number];
 /** Closed set: the v1 Issue Catalog (design doc section 5). No other issue kinds exist. */
 export const ISSUE_KINDS = [
   "garage_open_long",
+  "garage_open_uncertain",
   "lights_left_on",
   "fan_left_on",
   "critical_battery",

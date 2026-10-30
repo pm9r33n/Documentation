@@ -26,12 +26,47 @@ describe("garage_open_long", () => {
   ])("no issue while %s is on", (e) => {
     expect(kinds(snap({ [G]: ["open", HOUR], [e]: "on" }))).toEqual([]);
   });
-  it("no issue while a zone is unavailable, or within 60 s of clearing", () => {
-    expect(kinds(snap({ [G]: ["open", HOUR], "binary_sensor.backyard_person_detected": "unavailable" }))).toEqual([]);
+  it("no garage_open_long while a zone is unavailable, or within 60 s of clearing", () => {
+    expect(kinds(snap({ [G]: ["open", HOUR], "binary_sensor.backyard_person_detected": "unavailable" }))).not.toContain("garage_open_long");
     expect(kinds(snap({ [G]: ["open", HOUR], "binary_sensor.backyard_person_detected": ["off", 59_000] }))).toEqual([]);
   });
   it("auto_conditions_met is false when the toggle is off", () => {
     expect(run(snap({ [G]: ["open", HOUR] }), false).issues[0]?.auto_conditions_met).toBe(false);
+  });
+});
+
+describe("garage_open_uncertain", () => {
+  const G = "cover.garage_door";
+  const BACK = "binary_sensor.backyard_person_detected";
+  it("fires when presence can't be confirmed (unavailable) and is notify-only", () => {
+    const { issues } = run(snap({ [G]: ["open", HOUR], [BACK]: "unavailable" }));
+    expect(issues.map((i) => i.id)).toEqual(["garage_open_uncertain"]);
+    expect(issues[0]).toMatchObject({
+      type: "safety", suggested_action: "notify", can_auto: false, auto_conditions_met: false, revert_action: null,
+    });
+    expect(issues[0]?.reason).toContain("backyard sensor unavailable");
+  });
+  it("respects the 45 min threshold", () => {
+    expect(kinds(snap({ [G]: ["open", min(44)], [BACK]: "unavailable" }))).toEqual([]);
+    expect(kinds(snap({ [G]: ["open", min(45)], [BACK]: "unavailable" }))).toEqual(["garage_open_uncertain"]);
+  });
+  it("a missing entity counts the same as unavailable", () => {
+    const s = snap({ [G]: ["open", HOUR] });
+    delete s.entities[BACK];
+    expect(run(s).issues.map((i) => i.id)).toEqual(["garage_open_uncertain"]);
+  });
+  it("not when anyone is detected, including a zone with disagreeing sensors (someone home, other rooms idle)", () => {
+    expect(kinds(snap({ [G]: ["open", HOUR], [BACK]: "unavailable", "binary_sensor.kitchen_motion": "on" }))).toEqual([]);
+    expect(kinds(snap({ [G]: ["open", HOUR], [BACK]: "unavailable", "binary_sensor.house_person_detected": "on" }))).toEqual([]);
+    expect(kinds(snap({ [G]: ["open", HOUR], "binary_sensor.house_person_detected": "on" }))).toEqual([]);
+  });
+  it("never when the garage is closed, when someone is confirmed present, or when all is clear", () => {
+    expect(kinds(snap({ [BACK]: "unavailable" }))).toEqual([]);
+    expect(kinds(snap({ [G]: ["open", HOUR] }))).toEqual(["garage_open_long"]);
+  });
+  it("is mutually exclusive with garage_open_long, even toggle on/off", () => {
+    for (const auto of [true, false])
+      expect(kinds(snap({ [G]: ["open", HOUR], [BACK]: "unavailable" }), auto)).toEqual(["garage_open_uncertain"]);
   });
 });
 

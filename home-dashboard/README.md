@@ -9,7 +9,7 @@ Entities/rooms live in `src/config.placeholder.ts` (placeholder; replace with th
 | Module | Design step |
 |---|---|
 | `signals.ts`, `presence.ts`, `occupancy.ts`, `context.ts` | 1 Context State, presence, occupancy |
-| `issues.ts` | 2 v1 issue catalog (6 detectors, closed `IssueKind` union) |
+| `issues.ts` | 2 v1 issue catalog (7 detectors incl. notify-only `garage_open_uncertain`; closed `IssueKind` union) |
 | `priority.ts` | 3 scoring, selection, dismissal/revert modifiers |
 | `homeScreen.ts` | 4 view model for the home screen |
 | `autoActions.ts`, `engine.ts` | 5-6 Tier 1/2 auto-actions, live guards |

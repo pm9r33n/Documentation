@@ -145,6 +145,26 @@ describe("notify-only issues", () => {
   });
 });
 
+describe("garage_open_uncertain in the engine", () => {
+  it("never closes the garage; notifies once, loudly; shows as hero", async () => {
+    const { a, e } = mk();
+    const s = garageOpen(min(120), { "binary_sensor.backyard_person_detected": "unavailable" });
+    const ev = await e.tick(s);
+    await e.tick(s);
+    expect(a.calls).toEqual([]);
+    expect(a.notifications).toHaveLength(1);
+    expect(a.notifications[0]?.quiet).toBe(false);
+    expect(e.activeReverts(NOW)).toEqual([]);
+    expect(ev.selection.hero?.id).toBe("garage_open_uncertain");
+  });
+  it("manual accept only acknowledges; it does not close the door", async () => {
+    const { a, e } = mk();
+    const ev = e.evaluate(garageOpen(min(120), { "binary_sensor.backyard_person_detected": "unavailable" }));
+    await e.accept(ev.ranked[0]!, NOW);
+    expect(a.calls).toEqual([]);
+  });
+});
+
 describe("manual + dismiss", () => {
   it("manual accept executes regardless of auto toggle", async () => {
     const { a, e } = mk();
