@@ -22,6 +22,8 @@ export interface DismissalRecord {
   id: string;
   kind: IssueKind;
   at: number;
+  /** Acknowledged a notify-only issue: suppresses it for 24 h but carries no priority penalty. */
+  ack?: boolean;
 }
 export interface RevertRecord {
   kind: IssueKind;
@@ -46,7 +48,7 @@ export function scoreIssue(
   const ageMin = (now - Date.parse(d.created_at)) / MS.MIN;
   score += Math.min(DURATION_BONUS_CAP, Math.max(0, Math.floor(ageMin / 10)));
   if ((d.type === "safety" || d.type === "waste") && (tod === "evening" || tod === "night")) score += 5;
-  for (const x of history.dismissals) if (x.kind === d.kind) score -= DISMISSAL_PENALTY * decay(now - x.at);
+  for (const x of history.dismissals) if (x.kind === d.kind && !x.ack) score -= DISMISSAL_PENALTY * decay(now - x.at);
   for (const x of history.reverts) if (x.kind === d.kind) score -= REVERT_PENALTY * decay(now - x.at);
   return Math.max(0, Math.min(100, Math.round(score)));
 }

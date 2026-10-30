@@ -29,3 +29,10 @@ export const DEFAULT_THRESHOLDS: Thresholds = {
 };
 
 export const MS = { MIN, HOUR, DAY };
+
+/** Hard floor: learning may raise the garage threshold, never lower it. */
+export const GARAGE_OPEN_FLOOR_MIN = 45;
+/** After a failed auto-action, leave the issue alone this long (manual alternative stays available). */
+export const FAILURE_COOLDOWN_MS = 30 * MIN;
+/** After the user reverts an auto-action, don't auto-act on that same issue again for this long. */
+export const POST_REVERT_AUTO_PAUSE_MS = 24 * HOUR;
