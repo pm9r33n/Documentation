@@ -29,11 +29,22 @@ export interface RevertRecord {
   kind: IssueKind;
   at: number;
 }
+export interface AcceptRecord {
+  kind: IssueKind;
+  at: number;
+}
 export interface PriorityHistory {
   dismissals: DismissalRecord[];
   reverts: RevertRecord[];
+  /** Learning: accepted suggestions nudge that kind up. Optional so history can be built without it. */
+  accepts?: AcceptRecord[];
 }
 export const EMPTY_HISTORY: PriorityHistory = { dismissals: [], reverts: [] };
+const ACCEPT_BONUS = 1;
+const ACCEPT_BONUS_CAP = 5;
+/** Same exact issue dismissed this many times within 7 days is treated as ignored. */
+export const REPEAT_IGNORE_COUNT = 3;
+export const REPEAT_IGNORE_SUPPRESSION_MS = 3 * MS.DAY;
 
 /** 1 for just now, falling linearly to 0 after 7 days. */
 const decay = (ageMs: number): number => Math.max(0, 1 - ageMs / FIXED.dismissalDecayMs);
@@ -50,13 +61,21 @@ export function scoreIssue(
   if ((d.type === "safety" || d.type === "waste") && (tod === "evening" || tod === "night")) score += 5;
   for (const x of history.dismissals) if (x.kind === d.kind && !x.ack) score -= DISMISSAL_PENALTY * decay(now - x.at);
   for (const x of history.reverts) if (x.kind === d.kind) score -= REVERT_PENALTY * decay(now - x.at);
+  let bonus = 0;
+  for (const x of history.accepts ?? []) if (x.kind === d.kind) bonus += ACCEPT_BONUS * decay(now - x.at);
+  score += Math.min(ACCEPT_BONUS_CAP, bonus);
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
-/** 24 h suppression after the latest dismissal of this exact issue; null once expired. */
+/**
+ * 24 h suppression after the latest dismissal of this exact issue (72 h once it
+ * has been dismissed repeatedly); null once expired.
+ */
 export function dismissedUntil(id: string, now: number, history: PriorityHistory): number | null {
-  const last = Math.max(0, ...history.dismissals.filter((x) => x.id === id).map((x) => x.at));
-  const until = last + FIXED.dismissSuppressionMs;
+  const mine = history.dismissals.filter((x) => x.id === id);
+  const last = Math.max(0, ...mine.map((x) => x.at));
+  const repeats = mine.filter((x) => !x.ack && now - x.at < FIXED.dismissalDecayMs).length;
+  const until = last + (repeats >= REPEAT_IGNORE_COUNT ? REPEAT_IGNORE_SUPPRESSION_MS : FIXED.dismissSuppressionMs);
   return last > 0 && until > now ? until : null;
 }
 

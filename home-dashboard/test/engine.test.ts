@@ -141,7 +141,7 @@ describe("notify-only issues", () => {
     expect(a.notifications).toHaveLength(1);
     await e.accept(ev.ranked[0]!, NOW);
     expect(e.evaluate(s).selection.calm).toBe(true);
-    expect(e.evaluate(s).ranked[0]?.priority).toBe(ev.ranked[0]?.priority);
+    expect(e.evaluate(s).ranked[0]!.priority).toBeGreaterThanOrEqual(ev.ranked[0]!.priority); // accept nudges up, never a penalty
   });
 });
 

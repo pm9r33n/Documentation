@@ -1,3 +1,4 @@
+import { emptyLearning, type LearningState } from "./learning";
 import type { IssueKind, RevertAction } from "./types";
 
 export type ActivityType =
@@ -45,6 +46,8 @@ export interface EngineState {
   notified: string[];
   dismissals: { id: string; kind: IssueKind; at: number; ack?: boolean }[];
   revertedKinds: { kind: IssueKind; at: number }[];
+  accepts: { kind: IssueKind; at: number }[];
+  learning: LearningState;
 }
 
 export const emptyState = (autoActionsEnabled = true): EngineState => ({
@@ -57,4 +60,6 @@ export const emptyState = (autoActionsEnabled = true): EngineState => ({
   notified: [],
   dismissals: [],
   revertedKinds: [],
+  accepts: [],
+  learning: emptyLearning(),
 });

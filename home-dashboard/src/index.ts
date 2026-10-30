@@ -11,3 +11,4 @@ export * from "./autoActions";
 export * from "./activity";
 export * from "./engine";
 export * from "./homeScreen";
+export * from "./learning";

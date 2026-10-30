@@ -3,9 +3,10 @@ import { emptyState } from "./activity";
 import type { ExecutableAction, HomeAdapter } from "./adapter";
 import { autoGuard } from "./autoActions";
 import type { HomeConfig } from "./config";
-import { DEFAULT_THRESHOLDS, FAILURE_COOLDOWN_MS, FIXED, POST_REVERT_AUTO_PAUSE_MS, type Thresholds } from "./constants";
+import { FAILURE_COOLDOWN_MS, FIXED, MS, POST_REVERT_AUTO_PAUSE_MS, type Thresholds } from "./constants";
 import { buildContext, type EngineContext } from "./context";
 import { detectIssues } from "./issues";
+import { emptyLearning, recordLearning, resolveThresholds, type LearningEvent } from "./learning";
 import { rankIssues, selectIssues, type PriorityHistory, type Selection } from "./priority";
 import type { HomeSnapshot, Issue } from "./types";
 
@@ -22,7 +23,6 @@ export interface Evaluation {
 }
 
 export class HomeEngine {
-  thresholds: Thresholds = DEFAULT_THRESHOLDS;
   private inFlight = new Set<string>();
 
   constructor(
@@ -32,7 +32,38 @@ export class HomeEngine {
   ) {}
 
   get history(): PriorityHistory {
-    return { dismissals: this.state.dismissals, reverts: this.state.revertedKinds };
+    return { dismissals: this.state.dismissals, reverts: this.state.revertedKinds, accepts: this.state.accepts };
+  }
+
+  /** Defaults nudged by learning (bounded; garage never below 45 min). Falls back to defaults on bad data. */
+  get thresholds(): Thresholds {
+    return resolveThresholds(this.state.learning);
+  }
+
+  private learn(kind: Issue["kind"], ev: LearningEvent): void {
+    this.state.learning = recordLearning(this.state.learning, kind, ev);
+  }
+
+  /** User reset: drops tuning, accept/revert history and dismissal penalties; active 24 h suppressions stay. */
+  resetLearning(now: number): void {
+    this.state.learning = emptyLearning();
+    this.state.accepts = [];
+    this.state.revertedKinds = [];
+    this.state.dismissals = this.state.dismissals
+      .filter((d) => now - d.at < FIXED.dismissSuppressionMs)
+      .map((d) => ({ ...d, ack: true }));
+  }
+
+  /** Keep persisted state bounded. */
+  private prune(now: number): void {
+    const week = now - FIXED.dismissalDecayMs;
+    const s = this.state;
+    s.activity = s.activity.slice(-200);
+    s.reverts = s.reverts.filter((r) => r.status === "active" ? r.expiresAt > now - MS.DAY : r.createdAt > week);
+    s.dismissals = s.dismissals.filter((d) => d.at > week);
+    s.revertedKinds = s.revertedKinds.filter((d) => d.at > week);
+    s.accepts = s.accepts.filter((d) => d.at > week);
+    for (const [id, until] of Object.entries(s.autoPausedUntil)) if (until <= now) delete s.autoPausedUntil[id];
   }
 
   /** Persistent user preference; overrides everything, including learning. */
@@ -56,6 +87,7 @@ export class HomeEngine {
   async tick(snap: HomeSnapshot): Promise<Evaluation> {
     const ev = this.evaluate(snap);
     const now = snap.now;
+    this.prune(now);
     const open = new Set(ev.ranked.map((i) => i.id));
     this.state.notified = this.state.notified.filter((id) => open.has(id));
     for (const id of Object.keys(this.state.failures)) if (!open.has(id)) delete this.state.failures[id];
@@ -134,6 +166,7 @@ export class HomeEngine {
     }
     r.status = "reverted";
     this.state.revertedKinds.push({ kind: r.kind, at: now });
+    this.learn(r.kind, "reverted");
     this.state.autoPausedUntil[r.issueId] = now + POST_REVERT_AUTO_PAUSE_MS;
     this.log("reverted", stub, now, `Undid: ${r.label}`);
     return { ok: true };
@@ -148,6 +181,7 @@ export class HomeEngine {
   async accept(issue: Issue, now: number): Promise<{ ok: boolean }> {
     if (issue.suggested_action === "notify") {
       this.state.dismissals.push({ id: issue.id, kind: issue.kind, at: now, ack: true });
+      this.state.accepts.push({ kind: issue.kind, at: now });
       this.log("manual_action", issue, now, `Acknowledged: ${issue.title}`);
       return { ok: true };
     }
@@ -157,6 +191,8 @@ export class HomeEngine {
       this.log("manual_failed", issue, now, `Couldn't ${issue.suggested_action.replace(/_/g, " ")}: ${errText(e)}`);
       return { ok: false };
     }
+    this.state.accepts.push({ kind: issue.kind, at: now });
+    this.learn(issue.kind, "accepted");
     this.log("manual_action", issue, now, ACTION_VERB[issue.suggested_action]!);
     return { ok: true };
   }
@@ -164,6 +200,7 @@ export class HomeEngine {
   /** "Not now": 24 h suppression and a priority penalty for this issue type. */
   dismiss(issue: Issue, now: number): void {
     this.state.dismissals.push({ id: issue.id, kind: issue.kind, at: now });
+    this.learn(issue.kind, "dismissed");
     this.log("dismissed", issue, now, `Dismissed: ${issue.title}`);
   }
 
