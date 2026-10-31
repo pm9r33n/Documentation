@@ -8,7 +8,7 @@
     "noEmit": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "types": []
+    "types": ["node"]
   },
   "include": ["src", "test"]
 }

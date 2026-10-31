@@ -31,3 +31,13 @@ Tests never open a network connection (fake socket/transport + `test/fixtures/st
 | `QuickAccess` | `quickAccess` (Lights, Climate, Security, Areas) | navigation only; visually subordinate to the hero |
 
 State owned by the app: latest `HomeSnapshot`, `HomeEngine` (`engine.state` is JSON-safe, persist it), the Auto-Actions toggle (`engine.setAutoActionsEnabled`). Call `await engine.tick(snapshot)` on every relevant state change and on a ~1 min timer (thresholds are time-based).
+
+## Running (not yet run live)
+
+    cp .env.example .env   # fill in HA_URL, HA_TOKEN; export them (the app does not read .env itself)
+    npm start              # tsx src/main.ts
+
+- **Default is observe-only:** it connects, evaluates, and logs what it *would* do; no service calls, no notifications, no state written.
+- **Live mode** needs `HOME_DASHBOARD_LIVE=1` and `HA_NOTIFY_SERVICE`; state persists to `HOME_DASHBOARD_STATE_FILE` (default `data/engine-state.json`, git-ignored).
+- If the HA connection drops the process exits (code 1) so a supervisor restarts it with a fresh full sync; stale data is never acted on.
+- The token is only read from the environment and never logged.
