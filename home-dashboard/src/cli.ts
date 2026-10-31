@@ -38,7 +38,8 @@ export function parseEnv(env: Record<string, string | undefined>): CliConfig {
   const notifyService = env.HA_NOTIFY_SERVICE?.trim() || undefined;
   if (live && !notifyService) throw new Error("HA_NOTIFY_SERVICE is required when HOME_DASHBOARD_LIVE=1");
   return {
-    wsUrl: toWsUrl(need("HA_URL")),
+    // HA_WS_URL is for the add-on (ws://supervisor/core/websocket + SUPERVISOR_TOKEN); otherwise derive it from HA_URL.
+    wsUrl: env.HA_WS_URL?.trim() || toWsUrl(need("HA_URL")),
     token: need("HA_TOKEN"),
     notifyService,
     stateFile: env.HOME_DASHBOARD_STATE_FILE?.trim() || "data/engine-state.json",
@@ -80,14 +81,20 @@ export async function main(env: Record<string, string | undefined>, deps: Partia
   const state = store?.load ? await store.load() : undefined;
   const adapter: HomeAdapter = cfg.live ? new HaAdapter(client, { notifyService: cfg.notifyService }) : new DryRunAdapter(log);
   const engine = new HomeEngine(deps.config ?? haConfig, adapter, state);
+  let lastLine = "";
   const runner = new HomeRunner({
     engine,
     transport: client,
     config: deps.config ?? haConfig,
     store,
     onEvaluation: (ev) => {
+      // Log only when the picture changes, so the add-on log stays readable.
       const h = ev.selection.hero;
-      log(h ? `hero: ${h.id} (${h.priority})` : "calm");
+      const line = h
+        ? `hero: ${h.id} (${h.priority}); shown: ${[h, ...ev.selection.secondary].map((i) => i.id).join(", ")}; all open: ${ev.ranked.map((i) => `${i.id}(${i.priority})`).join(", ")}`
+        : `calm; open below threshold: ${ev.ranked.map((i) => `${i.id}(${i.priority})`).join(", ") || "none"}`;
+      if (line !== lastLine) log(line);
+      lastLine = line;
     },
   });
   // Stale data is never acted on, so on disconnect we exit and let the process manager restart us with a fresh sync.

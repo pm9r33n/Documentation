@@ -1,0 +1,14 @@
+name: Home Dashboard (observe-only)
+version: "0.1.0"
+slug: home_dashboard
+description: Evaluates what the house thinks you should know/do and logs it. Observe-only - sends no actions or notifications.
+arch:
+  - amd64
+  - aarch64
+startup: application
+boot: manual
+homeassistant_api: true
+options:
+  timezone: America/New_York
+schema:
+  timezone: str

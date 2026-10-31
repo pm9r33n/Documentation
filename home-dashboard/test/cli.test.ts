@@ -41,6 +41,10 @@ describe("env parsing", () => {
     expect(toWsUrl("https://ha.example.com/")).toBe("wss://ha.example.com/api/websocket");
     expect(parseEnv(ok)).toMatchObject({ wsUrl: "ws://ha.local:8123/api/websocket", live: false, stateFile: "data/engine-state.json" });
   });
+  it("HA_WS_URL overrides (add-on); HA_URL is then optional", () => {
+    expect(parseEnv({ HA_WS_URL: "ws://supervisor/core/websocket", HA_TOKEN: "t" }).wsUrl).toBe("ws://supervisor/core/websocket");
+    expect(() => parseEnv({ HA_TOKEN: "t" })).toThrow(/HA_URL/);
+  });
   it("live needs an explicit flag plus a notify service; errors never contain the token", () => {
     expect(parseEnv({ ...ok, HOME_DASHBOARD_LIVE: "true" }).live).toBe(false);
     expect(() => parseEnv({ ...ok, HOME_DASHBOARD_LIVE: "1" })).toThrow(/HA_NOTIFY_SERVICE/);
@@ -89,6 +93,12 @@ describe("main (fake connection, never live)", () => {
     expect(fake.calls).toContain("cover.close_cover");
     expect(fake.calls).toContain("notify.mobile_app_x");
     expect(JSON.parse(await readFile(file, "utf8")).reverts.length).toBeGreaterThan(0);
+  });
+  it("logs the evaluation only when it changes", async () => {
+    const { logs, fake } = await run(base);
+    const before = logs.filter((l) => l.startsWith("hero:") || l.startsWith("calm")).length;
+    expect(before).toBe(1);
+    expect(fake.calls).toEqual([]);
   });
   it("exits for restart when the connection drops", async () => {
     const { fake, exits } = await run(base);
