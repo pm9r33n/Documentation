@@ -1,0 +1,14 @@
+# Signals consumed by the home-dashboard observe-only app (home-dashboard/src/config.ha.ts).
+# Presence-only: these may add "someone is here", never prove "nobody is here".
+template:
+  - binary_sensor:
+      - name: "Backyard Ring Motion Recent"
+        unique_id: home_dashboard_backyard_ring_motion_recent
+        device_class: occupancy
+        # Ring offline/unavailable -> this sensor is unavailable, which the dashboard treats as presence (conservative).
+        availability: "{{ states('event.backyard_motion') != 'unavailable' }}"
+        # On for 5 minutes after each Ring motion event; re-evaluated every minute via now().
+        state: >
+          {% set s = states('event.backyard_motion') %}
+          {% set t = as_datetime(s) if s not in ['unknown', 'unavailable', 'none', ''] else none %}
+          {{ t is not none and (now() - t).total_seconds() < 300 }}

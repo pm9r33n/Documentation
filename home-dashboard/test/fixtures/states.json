@@ -136,5 +136,11 @@
   "state": "on",
   "last_changed": "2026-10-29T12:00:00+00:00",
   "attributes": {}
+ },
+ {
+  "entity_id": "binary_sensor.backyard_ring_motion_recent",
+  "state": "off",
+  "last_changed": "2026-10-29T12:00:00+00:00",
+  "attributes": {}
  }
 ]

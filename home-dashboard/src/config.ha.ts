@@ -8,7 +8,8 @@ import type { HomeConfig } from "./config";
  *   presence for them comes from the person.* trackers in `zones.house`.
  * - Dog room (basement) left out: its motion/person sensors are unavailable and dogs would hold
  *   "occupied" permanently. Its person-occupancy camera sensor still feeds house presence.
- * - Backyard has no sensor: left empty, so it is unmonitored and does not block garage auto-close.
+ * - Backyard: Ring Stick Up Cam motion, via packages/home_dashboard_signals.yaml (on for 5 min after each
+ *   motion event; unavailable when Ring is offline, which counts as presence). Presence-only signal.
  * - No exterior door sensors exist: `exteriorDoors` empty keeps `door_open_late` inactive.
  */
 export const haConfig: HomeConfig = {
@@ -55,7 +56,7 @@ export const haConfig: HomeConfig = {
       "binary_sensor.reolink_doorbell_person_occupancy",
       "binary_sensor.doorbell_person",
     ],
-    backyard: [],
+    backyard: ["binary_sensor.backyard_ring_motion_recent"],
   },
   garage: { doorEntity: "cover.ratgdov2_5i_e45c0a_door" },
   exteriorDoors: [],

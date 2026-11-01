@@ -31,20 +31,25 @@ class FakeTransport implements HaTransport {
 }
 
 describe("real config", () => {
-  it("validates; backyard unmonitored; door_open_late inactive; no Tier 3 entities watched", () => {
+  it("validates; all zones monitored; door_open_late inactive; no Tier 3 entities watched", () => {
     expect(() => validateConfig(haConfig)).not.toThrow();
-    expect(unmonitoredZones(haConfig)).toEqual(["backyard"]);
+    expect(unmonitoredZones(haConfig)).toEqual([]);
     expect(haConfig.exteriorDoors).toEqual([]);
     const w = watchedEntities(haConfig);
     expect(w.has(GARAGE)).toBe(true);
     expect([...w].filter((e) => e.startsWith("lock.") || e.startsWith("alarm_control_panel."))).toEqual([]);
   });
-  it("fixture: everyone away -> garage_open_long; backyard doesn't block; a person home does", () => {
+  it("fixture: everyone away -> garage_open_long; a person home blocks; backyard motion blocks; Ring offline blocks", () => {
     const watched = watchedEntities(haConfig);
     const e = new HomeEngine(haConfig, new StubAdapter());
     const snap = snapshotFromStates(NOW, states, watched);
     expect(e.evaluate(snap).ranked.map((i) => i.id)).toContain("garage_open_long");
-    expect(computePresence(snap, haConfig).backyard.status).toBe("unmonitored");
+    expect(computePresence(snap, haConfig).backyard.status).toBe("clear");
+    const B = "binary_sensor.backyard_ring_motion_recent";
+    for (const state of ["on", "unavailable"]) {
+      const s2 = states.map((s) => (s.entity_id === B ? { ...s, state, last_changed: "2026-10-30T19:40:00+00:00" } : s));
+      expect(e.evaluate(snapshotFromStates(NOW, s2, watched)).ranked.map((i) => i.id)).not.toContain("garage_open_long");
+    }
     const home = states.map((s) => (s.entity_id === "person.carrie" ? { ...s, state: "home" } : s));
     const ids = e.evaluate(snapshotFromStates(NOW, home, watched)).ranked.map((i) => i.id);
     expect(ids).not.toContain("garage_open_long");
