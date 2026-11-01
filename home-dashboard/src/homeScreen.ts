@@ -1,7 +1,7 @@
 import type { RevertEntry } from "./activity";
 import type { Evaluation } from "./engine";
 import type { HomeConfig } from "./config";
-import type { HomeSnapshot, Issue, SuggestedAction } from "./types";
+import type { HomeSnapshot, Issue, IssueCategory, IssueKind, SuggestedAction } from "./types";
 
 const ACTION_LABEL: Record<SuggestedAction, string> = {
   close_garage: "Close garage",
@@ -15,7 +15,16 @@ export interface WeatherInfo {
   tempF?: number;
 }
 
-export interface HeroIssueView {
+/** Fields the UI needs to color-code and date an issue. */
+export interface IssueMeta {
+  issueKind: IssueKind;
+  issueType: IssueCategory;
+  priority: number;
+  /** ISO time the underlying condition began. */
+  createdAt: string;
+}
+
+export interface HeroIssueView extends IssueMeta {
   kind: "issue";
   issueId: string;
   title: string;
@@ -34,7 +43,7 @@ export interface HeroCalmView {
 export interface HomeScreenViewModel {
   contextBar: { timeOfDay: string; presence: string; issueCount: number; text: string };
   hero: HeroIssueView | HeroCalmView;
-  secondary: { issueId: string; title: string; reason: string; primary: { action: SuggestedAction; label: string } }[];
+  secondary: (IssueMeta & { issueId: string; title: string; reason: string; primary: { action: SuggestedAction; label: string } })[];
   /** Revert chips for automatic actions inside their 30-minute window. Rendered with the hero. */
   undo: { revertId: string; label: string; expiresAt: number }[];
   calmStatus: { weather: WeatherInfo | null; presenceSummary: string; houseState: string };
@@ -50,6 +59,7 @@ function presenceText(ev: Evaluation): string {
   return `Activity: ${z.join(", ")}`;
 }
 
+const meta = (i: Issue): IssueMeta => ({ issueKind: i.kind, issueType: i.type, priority: i.priority, createdAt: i.created_at });
 const issueView = (i: Issue) => ({ action: i.suggested_action, label: ACTION_LABEL[i.suggested_action] });
 
 export function buildHomeScreen(
@@ -76,6 +86,7 @@ export function buildHomeScreen(
     hero: hero
       ? {
           kind: "issue",
+          ...meta(hero),
           issueId: hero.id,
           title: hero.title,
           reason: hero.reason,
@@ -84,7 +95,7 @@ export function buildHomeScreen(
           status: opts.failedIssueIds?.includes(hero.id) ? "auto_failed" : "open",
         }
       : { kind: "calm", title: "All calm", reason: "Nothing needs your attention." },
-    secondary: secondary.map((i) => ({ issueId: i.id, title: i.title, reason: i.reason, primary: issueView(i) })),
+    secondary: secondary.map((i) => ({ ...meta(i), issueId: i.id, title: i.title, reason: i.reason, primary: issueView(i) })),
     undo: (opts.reverts ?? []).map((r) => ({ revertId: r.id, label: r.label, expiresAt: r.expiresAt })),
     calmStatus: {
       weather: opts.weather ?? null,

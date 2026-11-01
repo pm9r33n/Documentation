@@ -200,7 +200,10 @@ describe("home screen", () => {
     const s = garageOpen(min(60), { "sensor.front_door_lock_battery": "2" });
     e.setAutoActionsEnabled(false);
     const vm = buildHomeScreen(e.evaluate(s), s, config);
-    expect(vm.hero).toMatchObject({ kind: "issue", issueId: "garage_open_long" });
+    expect(vm.hero).toMatchObject({ kind: "issue", issueId: "garage_open_long", issueType: "safety", issueKind: "garage_open_long" });
+    expect(typeof (vm.hero as { priority: number }).priority).toBe("number");
+    expect(Date.parse((vm.hero as { createdAt: string }).createdAt)).toBe(NOW - min(60));
+    expect(vm.secondary[0]).toMatchObject({ issueType: "device_health" });
     expect(vm.secondary.map((i) => i.issueId)).toEqual(["critical_battery:lock.front_door"]);
     expect(vm.contextBar.issueCount).toBe(2);
     expect(vm.undo).toEqual([]);
