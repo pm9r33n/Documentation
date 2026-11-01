@@ -7,6 +7,8 @@ import { HomeRunner, type StateStore } from "./ha/runner";
 import type { HaTransport } from "./ha/transport";
 import { HaWebSocketClient } from "./ha/wsClient";
 import type { HomeConfig } from "./config";
+import { buildHomeScreen } from "./homeScreen";
+import { HaRestPublisher, toPublished, type FetchLike } from "./ha/publisher";
 
 export interface CliConfig {
   wsUrl: string;
@@ -15,6 +17,8 @@ export interface CliConfig {
   stateFile: string;
   /** Only true when HOME_DASHBOARD_LIVE=1. Otherwise actions/notifications are logged, never sent. */
   live: boolean;
+  /** HOME_DASHBOARD_PUBLISH=1: publish the home screen state to sensor.home_dashboard_state (a state write, not an action). */
+  publishRestUrl?: string;
 }
 
 /** http(s)://host:8123[/] -> ws(s)://host:8123/api/websocket. */
@@ -25,6 +29,13 @@ export function toWsUrl(url: string): string {
   u.pathname = "/api/websocket";
   u.search = "";
   return u.toString();
+}
+
+function restBase(env: Record<string, string | undefined>): string {
+  const explicit = env.HA_REST_URL?.trim();
+  if (explicit) return explicit;
+  const u = new URL(env.HA_URL?.trim() || "");
+  return u.origin;
 }
 
 /** Errors name the variable only, never its value. */
@@ -44,6 +55,7 @@ export function parseEnv(env: Record<string, string | undefined>): CliConfig {
     notifyService,
     stateFile: env.HOME_DASHBOARD_STATE_FILE?.trim() || "data/engine-state.json",
     live,
+    publishRestUrl: env.HOME_DASHBOARD_PUBLISH === "1" ? restBase(env) : undefined,
   };
 }
 
@@ -66,6 +78,8 @@ export interface CliDeps {
   store?: (cfg: CliConfig) => (StateStore & { load?: () => Promise<import("./activity").EngineState> }) | undefined;
   /** Tick cadence for time-based thresholds. */
   intervalMs?: number;
+  fetch?: FetchLike;
+  now?: () => number;
   setInterval?: (fn: () => void, ms: number) => unknown;
   exit?: (code: number) => void;
 }
@@ -82,12 +96,30 @@ export async function main(env: Record<string, string | undefined>, deps: Partia
   const adapter: HomeAdapter = cfg.live ? new HaAdapter(client, { notifyService: cfg.notifyService }) : new DryRunAdapter(log);
   const engine = new HomeEngine(deps.config ?? haConfig, adapter, state);
   let lastLine = "";
+  const publisher = cfg.publishRestUrl ? new HaRestPublisher(cfg.publishRestUrl, cfg.token, deps.fetch) : undefined;
+  let lastPublished = "";
+  let lastPublishAt = 0;
+  const HEARTBEAT_MS = 5 * 60_000;
   const runner = new HomeRunner({
     engine,
     transport: client,
     config: deps.config ?? haConfig,
     store,
-    onEvaluation: (ev) => {
+    onEvaluation: (ev, snap) => {
+      if (publisher) {
+        const vm = buildHomeScreen(ev, snap, deps.config ?? haConfig);
+        const pub = toPublished(vm, {
+          observeOnly: !cfg.live,
+          recent: engine.state.activity.map((a) => a.message),
+          evaluatedAt: new Date(snap.now).toISOString(),
+        });
+        const sig = JSON.stringify({ ...pub, attributes: { ...pub.attributes, evaluated_at: "" } });
+        if (sig !== lastPublished || snap.now - lastPublishAt >= HEARTBEAT_MS) {
+          lastPublished = sig;
+          lastPublishAt = snap.now;
+          publisher.publish(pub).catch((e: unknown) => log(`publish failed: ${e instanceof Error ? e.message : "error"}`));
+        }
+      }
       // Log only when the picture changes, so the add-on log stays readable.
       const h = ev.selection.hero;
       const line = h

@@ -5,3 +5,5 @@ Reads state through the Supervisor proxy (no long-lived token needed), runs the 
 Start it manually (boot: manual) and read the add-on **Log** tab.
 
 Option `timezone` (default `America/New_York`) drives evening/night rules.
+
+Option `publish_state` (default off): publishes the home screen to `sensor.home_dashboard_state` (attributes hold the view model) for the test dashboard. It writes that one entity only.

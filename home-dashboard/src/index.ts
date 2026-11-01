@@ -17,3 +17,4 @@ export * from "./ha/transport";
 export * from "./ha/haAdapter";
 export * from "./ha/wsClient";
 export * from "./ha/runner";
+export * from "./ha/publisher";

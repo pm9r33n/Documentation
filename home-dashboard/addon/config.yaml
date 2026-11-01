@@ -1,5 +1,5 @@
 name: Home Dashboard (observe-only)
-version: "0.1.1"
+version: "0.2.0"
 slug: home_dashboard
 description: Evaluates what the house thinks you should know/do and logs it. Observe-only - sends no actions or notifications.
 arch:
@@ -10,5 +10,7 @@ boot: manual
 homeassistant_api: true
 options:
   timezone: America/New_York
+  publish_state: false
 schema:
   timezone: str
+  publish_state: bool

@@ -1,0 +1,60 @@
+{
+ "title": "Home Test",
+ "views": [
+  {
+   "title": "Home",
+   "path": "home",
+   "cards": [
+    {
+     "type": "vertical-stack",
+     "cards": [
+      {
+       "type": "markdown",
+       "content": "{% set st = states('sensor.home_dashboard_state') %}{% set c = state_attr('sensor.home_dashboard_state','context_bar') %}\n{% if st in ['unknown','unavailable'] or c is none %}**Home Dashboard is not publishing.** Turn on `publish_state` in the app's Configuration and start it.\n{% else %}**{{ c.text }}**{% if state_attr('sensor.home_dashboard_state','observe_only') %}  \u00b7  _observe-only_{% endif %}{% endif %}"
+      },
+      {
+       "type": "markdown",
+       "content": "{% set h = state_attr('sensor.home_dashboard_state','hero') %}\n{% if h is none %}_Waiting for data..._\n{% elif h.kind == 'issue' %}## {{ h.title }}\n{{ h.reason }}\n\nSuggested: **{{ h.primary.label }}**  \u00b7  or \"{{ h.secondary.label }}\"{% if h.status == 'auto_failed' %}\n\n\u26a0 The automatic action failed. Do it manually.{% endif %}\n{% else %}## {{ h.title }}\n{{ h.reason }}{% endif %}"
+      },
+      {
+       "type": "markdown",
+       "content": "{% set s = state_attr('sensor.home_dashboard_state','secondary') or [] %}\n{% for i in s %}- **{{ i.title }}** - {{ i.reason }}  _({{ i.primary.label }})_\n{% else %}_No other issues._\n{% endfor %}",
+       "title": "Also worth a look"
+      },
+      {
+       "type": "markdown",
+       "content": "{% set c = state_attr('sensor.home_dashboard_state','calm_status') %}\n{% set d = (state_attr('sensor.forecast_days','days') or [])[0:1] %}\n{% if c is none %}_Waiting for data..._{% else %}**House:** {{ c.houseState }}  \n**People:** {{ c.presenceSummary }}{% for x in d %}  \n**Weather:** {{ x.cond | replace('-', ' ') }}, {{ x.hi }}\u00b0 / {{ x.lo }}\u00b0{% endfor %}{% endif %}",
+       "title": "Calm status"
+      },
+      {
+       "type": "horizontal-stack",
+       "cards": [
+        {
+         "type": "markdown",
+         "content": "{% set q = (state_attr('sensor.home_dashboard_state','quick_access') or []) | selectattr('id','eq','lights') | list %}\n{% for x in q %}**{{ x.label }}**  \n{{ x.summary }}{% else %}**Lights**  \n\u2014{% endfor %}"
+        },
+        {
+         "type": "markdown",
+         "content": "{% set q = (state_attr('sensor.home_dashboard_state','quick_access') or []) | selectattr('id','eq','climate') | list %}\n{% for x in q %}**{{ x.label }}**  \n{{ x.summary }}{% else %}**Climate**  \n\u2014{% endfor %}"
+        },
+        {
+         "type": "markdown",
+         "content": "{% set q = (state_attr('sensor.home_dashboard_state','quick_access') or []) | selectattr('id','eq','security') | list %}\n{% for x in q %}**{{ x.label }}**  \n{{ x.summary }}{% else %}**Security**  \n\u2014{% endfor %}"
+        },
+        {
+         "type": "markdown",
+         "content": "{% set q = (state_attr('sensor.home_dashboard_state','quick_access') or []) | selectattr('id','eq','areas') | list %}\n{% for x in q %}**{{ x.label }}**  \n{{ x.summary }}{% else %}**Areas**  \n\u2014{% endfor %}"
+        }
+       ]
+      },
+      {
+       "type": "markdown",
+       "content": "{% set r = state_attr('sensor.home_dashboard_state','recent_activity') or [] %}\n{% for m in r | reverse %}- {{ m }}\n{% else %}_Nothing yet._\n{% endfor %}\n_Updated {{ (state_attr('sensor.home_dashboard_state','evaluated_at') | as_datetime | as_local).strftime('%-I:%M %p') if state_attr('sensor.home_dashboard_state','evaluated_at') else 'never' }}_",
+       "title": "Test panel: what it would do"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

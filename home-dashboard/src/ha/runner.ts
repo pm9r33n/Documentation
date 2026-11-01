@@ -1,7 +1,7 @@
 import type { HomeConfig } from "../config";
 import type { Evaluation, HomeEngine } from "../engine";
 import type { EngineState } from "../activity";
-import type { EntityState } from "../types";
+import type { EntityState, HomeSnapshot } from "../types";
 import { REVERT_ACTION_PREFIX, toEntityState, watchedEntities } from "./haAdapter";
 import type { HaTransport } from "./transport";
 
@@ -15,7 +15,7 @@ export interface RunnerDeps {
   config: HomeConfig;
   now?: () => number;
   store?: StateStore;
-  onEvaluation?: (ev: Evaluation) => void;
+  onEvaluation?: (ev: Evaluation, snap: HomeSnapshot) => void;
 }
 
 /**
@@ -60,9 +60,10 @@ export class HomeRunner {
   tick(): Promise<Evaluation | null> {
     const run = this.chain.then(async () => {
       if (!this.connected) return null;
-      const ev = await this.d.engine.tick({ now: this.now(), entities: { ...this.entities } });
+      const snap = { now: this.now(), entities: { ...this.entities } };
+      const ev = await this.d.engine.tick(snap);
       await this.d.store?.save(this.d.engine.state);
-      this.d.onEvaluation?.(ev);
+      this.d.onEvaluation?.(ev, snap);
       return ev;
     });
     this.chain = run.catch(() => undefined);

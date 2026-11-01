@@ -106,3 +106,32 @@ describe("main (fake connection, never live)", () => {
     expect(exits).toEqual([1]);
   });
 });
+
+describe("state publishing (fake fetch)", () => {
+  const base = { HA_URL: "http://ha.local:8123", HA_TOKEN: "tok", HOME_DASHBOARD_PUBLISH: "1", HA_REST_URL: "http://supervisor/core" };
+  it("posts exactly one entity, with observe-only flag, no undo, and still calls no services", async () => {
+    const fake = new Fake();
+    const posts: { url: string; body: any }[] = [];
+    await main(base, {
+      connect: async () => fake, log: () => undefined, exit: () => undefined, setInterval: () => 0,
+      fetch: async (url, init) => { posts.push({ url, body: JSON.parse(init.body) }); return { ok: true, status: 200 }; },
+    });
+    expect(fake.calls).toEqual([]);
+    expect(posts.length).toBe(1);
+    expect(posts[0]!.url).toBe("http://supervisor/core/api/states/sensor.home_dashboard_state");
+    const a = posts[0]!.body.attributes;
+    expect(a.observe_only).toBe(true);
+    expect(a.undo).toEqual([]);
+    expect(Object.keys(a)).toEqual(expect.arrayContaining(["context_bar", "hero", "secondary", "calm_status", "quick_access"]));
+    expect(posts[0]!.body.state).toBe("garage_open_long");
+  });
+  it("does nothing without the flag, and a publish failure never crashes", async () => {
+    let n = 0;
+    await main({ HA_URL: "http://x", HA_TOKEN: "t" }, { connect: async () => new Fake(), log: () => undefined, exit: () => undefined, setInterval: () => 0, fetch: async () => { n++; return { ok: true, status: 200 }; } });
+    expect(n).toBe(0);
+    const logs: string[] = [];
+    await main(base, { connect: async () => new Fake(), log: (m) => logs.push(m), exit: () => undefined, setInterval: () => 0, fetch: async () => ({ ok: false, status: 401 }) });
+    await new Promise((r) => setTimeout(r, 10));
+    expect(logs.some((l) => l.includes("publish failed: HTTP 401"))).toBe(true);
+  });
+});
